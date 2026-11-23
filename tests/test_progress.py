@@ -2,7 +2,7 @@ import unittest
 
 from helpers import ProjectTestCase
 
-from agentharness.progress import Progress, ProgressError
+from harnesspro.progress import Progress, ProgressError
 
 
 class ProgressTests(ProjectTestCase):
@@ -77,7 +77,7 @@ class ProgressTests(ProjectTestCase):
         self.assertEqual([f["title"] for f in added], ["Rate-limit logins", "Lock accounts"])
         self.assertEqual(added[0]["steps"], ["Write the failing test for 6 attempts", "Run it"])
         self.assertEqual(added[1]["steps"], ["Lock after 10 failures"])
-        self.assertEqual(self.p.import_plan(plan), [])  # idempotent
+        self.assertEqual(self.p.import_plan(plan), [])
 
     def test_import_plan_without_tasks(self):
         plan = self.write("p.md", "# Nothing here\n")

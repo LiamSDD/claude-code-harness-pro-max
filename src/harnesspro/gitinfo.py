@@ -1,5 +1,3 @@
-"""Small, fast, failure-tolerant git helpers (no third-party deps)."""
-
 from __future__ import annotations
 
 import os
@@ -73,7 +71,6 @@ def status(cwd: str) -> Optional[GitStatus]:
             _, _, a, b = line.split(" ")
             st.ahead, st.behind = int(a.lstrip("+")), abs(int(b))
         elif line.startswith(("1 ", "2 ")):
-            # 1 XY sub mH mI mW hH hI path / 2 ... X<score> path<TAB>orig
             fields = line.split(" ", 8 if line[0] == "1" else 9)
             xy = fields[1]
             if xy[0] != ".":

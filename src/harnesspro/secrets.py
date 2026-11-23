@@ -1,17 +1,3 @@
-"""Secret detection and redaction.
-
-Used in three places:
-
-* before Claude writes or edits a file (block credentials landing in code),
-* on prompts and Bash commands (warn when a live key is about to enter the
-  transcript or a shell history),
-* by ``harness scan`` for files, directories and staged git changes.
-
-High-confidence detectors match provider-specific formats. The generic
-detector looks for ``key = "value"`` assignments and only reports values
-with enough entropy that do not look like placeholders.
-"""
-
 from __future__ import annotations
 
 import math
@@ -30,7 +16,7 @@ class Detector:
     title: str
     pattern: Pattern[str]
     confidence: str = HIGH
-    group: int = 0  # regex group holding the secret value
+    group: int = 0
 
 
 @dataclass(frozen=True)
@@ -40,7 +26,7 @@ class Finding:
     confidence: str
     line: int
     column: int
-    preview: str  # redacted
+    preview: str
     path: Optional[str] = None
 
     def describe(self) -> str:
@@ -112,7 +98,6 @@ _PLACEHOLDER = re.compile(
     r"not[_-]?a[_-]?real|0000000000|1234567890|abcdefghij)"
 )
 
-# Published documentation keys that are safe by definition.
 _KNOWN_SAFE = {
     "AKIAIOSFODNN7EXAMPLE",
     "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
@@ -130,7 +115,6 @@ def shannon_entropy(value: str) -> float:
 
 
 def redact(value: str, keep: int = 4) -> str:
-    """``sk-ant-api03-abcdef...`` -> ``sk-a…(108 chars)``."""
     if len(value) <= keep:
         return "…"
     return f"{value[:keep]}…({len(value)} chars)"
@@ -141,7 +125,7 @@ def _is_placeholder(value: str) -> bool:
         return True
     if _PLACEHOLDER.search(value):
         return True
-    if len(set(value)) <= 3:  # "aaaaaaaaaaaa", "------------"
+    if len(set(value)) <= 3:
         return True
     return False
 
@@ -152,11 +136,9 @@ def scan_text(
     allow_patterns: Iterable[str] = (),
     min_confidence: str = MEDIUM,
 ) -> List[Finding]:
-    """Return secrets found in ``text``. Values are never returned in clear."""
     allow = [re.compile(p) for p in allow_patterns]
     findings: List[Finding] = []
     seen_spans = []
-    # Precompute line starts for line/column numbers.
     line_starts = [0]
     for m in re.finditer("\n", text):
         line_starts.append(m.end())
@@ -179,7 +161,7 @@ def scan_text(
             start = m.start(det.group) if det.group else m.start()
             end = start + len(value)
             if any(s <= start < e or s < end <= e for s, e in seen_spans):
-                continue  # already reported by a more specific detector
+                continue
             if det.id != "private-key" and _is_placeholder(value):
                 continue
             if any(a.search(value) or a.search(m.group(0)) for a in allow):
@@ -188,7 +170,7 @@ def scan_text(
                 if shannon_entropy(value) < 3.3 or value.isalpha() or value.isdigit():
                     continue
                 if "/" in value and value.count("/") >= 2 and " " not in value and "." in value:
-                    continue  # paths and URLs
+                    continue
             line, col = locate(start)
             findings.append(Finding(det.id, det.title, det.confidence, line, col, redact(value), path))
             seen_spans.append((start, end))
@@ -197,7 +179,6 @@ def scan_text(
 
 
 def redact_text(text: str, max_len: Optional[int] = None) -> str:
-    """Replace every detected secret in ``text`` with a redacted preview."""
     out = text
     for det in DETECTORS:
 
@@ -212,10 +193,6 @@ def redact_text(text: str, max_len: Optional[int] = None) -> str:
         out = out[: max_len - 1] + "…"
     return out
 
-
-# --------------------------------------------------------------------------
-# File scanning
-# --------------------------------------------------------------------------
 
 SKIP_DIRS = {
     ".git",

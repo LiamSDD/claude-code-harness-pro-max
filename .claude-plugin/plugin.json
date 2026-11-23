@@ -1,30 +1,35 @@
 {
-  "name": "agent-harness",
-  "displayName": "Agent Harness",
-  "version": "1.1.0",
-  "description": "Guardrails, memory, verification and engineering workflows for Claude Code: a shell-aware policy engine, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check before Claude stops, six subagents and 18 skills (TDD, systematic debugging, plans, subagent-driven development, code review).",
+  "name": "harness-pro-max",
+  "displayName": "Claude Code Harness Pro Max",
+  "version": "2.0.0",
+  "description": "Guardrails, token and cost control, multi-agent orchestration, memory and verification for Claude Code: a shell-aware policy engine, token-waste guards, subagent routing and limits, session budgets, cost analytics, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check, 7 subagents and 20 workflow skills.",
   "author": {
     "name": "priveight02"
   },
-  "repository": "https://github.com/priveight02/agent-harness",
+  "repository": "https://github.com/priveight02/claude-code-harness-pro-max",
   "license": "MIT",
   "keywords": [
     "guardrails",
+    "cost",
+    "tokens",
+    "subagents",
+    "multi-agent",
     "security",
     "hooks",
     "audit",
-    "long-running agents",
-    "policy"
+    "tdd",
+    "workflows"
   ],
   "agents": [
-    "./src/agentharness/templates/agents/implementer.md",
-    "./src/agentharness/templates/agents/code-reviewer.md",
-    "./src/agentharness/templates/agents/test-runner.md",
-    "./src/agentharness/templates/agents/security-auditor.md",
-    "./src/agentharness/templates/agents/planner.md",
-    "./src/agentharness/templates/agents/evaluator.md"
+    "./src/harnesspro/templates/agents/explorer.md",
+    "./src/harnesspro/templates/agents/implementer.md",
+    "./src/harnesspro/templates/agents/code-reviewer.md",
+    "./src/harnesspro/templates/agents/test-runner.md",
+    "./src/harnesspro/templates/agents/security-auditor.md",
+    "./src/harnesspro/templates/agents/planner.md",
+    "./src/harnesspro/templates/agents/evaluator.md"
   ],
   "skills": [
-    "./src/agentharness/templates/skills/"
+    "./src/harnesspro/templates/skills/"
   ]
 }

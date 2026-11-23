@@ -3,9 +3,9 @@ import unittest
 
 from helpers import ROOT, ProjectTestCase
 
-from agentharness import skills
+from harnesspro import skills
 
-SHIPPED = os.path.join(ROOT, "src", "agentharness", "templates", "skills")
+SHIPPED = os.path.join(ROOT, "src", "harnesspro", "templates", "skills")
 
 
 class FrontmatterTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class CheckTests(ProjectTestCase):
         self.make(".claude/skills/local-one", "name: local-one\ndescription: Use when testing skill listing.")
         found = {(s.source, s.name) for s in skills.list_skills(self.project)}
         self.assertIn(("project", "local-one"), found)
-        self.assertIn(("agent-harness", "test-driven-development"), found)
+        self.assertIn(("harness-pro-max", "test-driven-development"), found)
 
 
 class ShippedSkillsTests(unittest.TestCase):
@@ -87,7 +87,7 @@ class ShippedSkillsTests(unittest.TestCase):
     def test_expected_skills_ship(self):
         names = {os.path.basename(os.path.dirname(p)) for p in skills.find_skill_files([SHIPPED])}
         for required in (
-            "using-agent-harness",
+            "using-harness-pro-max",
             "test-driven-development",
             "systematic-debugging",
             "verification-before-completion",

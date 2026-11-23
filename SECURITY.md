@@ -2,7 +2,7 @@
 
 ## Threat model
 
-agent-harness protects a developer's machine and repository from mistakes an AI coding agent is likely to make, and from prompt injection that tries to turn the agent against its user (for example a README or web page telling it to upload `~/.ssh` somewhere). It does this by inspecting each tool call before Claude Code executes it.
+Claude Code Harness Pro Max protects a developer's machine and repository from mistakes an AI coding agent is likely to make, and from prompt injection that tries to turn the agent against its user (for example a README or web page telling it to upload `~/.ssh` somewhere). It does this by inspecting each tool call before Claude Code executes it.
 
 It is **not a sandbox**. It cannot:
 

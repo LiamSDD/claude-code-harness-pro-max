@@ -4,7 +4,7 @@ import unittest
 
 from helpers import FAKE_GITHUB, ROOT, ProjectTestCase
 
-from agentharness import vet
+from harnesspro import vet
 
 
 def rules(v):
@@ -126,8 +126,6 @@ class VetTests(ProjectTestCase):
 
 
 class RepositoryHygieneTests(unittest.TestCase):
-    """The harness must pass its own checks."""
-
     def test_repository_vets_clean(self):
         v = vet.vet(ROOT)
         high = [f.render() for f in v.findings if f.severity == vet.HIGH and not f.path.startswith((".venv", "dist", "build"))]

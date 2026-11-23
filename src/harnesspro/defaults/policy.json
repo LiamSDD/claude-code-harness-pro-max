@@ -139,6 +139,47 @@
     "max_blocks": 1,
     "test_commands": []
   },
+  "cost": {
+    "session_budget_usd": 0,
+    "warn_at": 0.8,
+    "on_budget": "ask",
+    "read_dedupe": true,
+    "max_read_bytes": 200000,
+    "output_guard": "deny",
+    "generated_reads": "deny",
+    "generated_paths": [
+      "**/node_modules/**",
+      "*.min.js",
+      "*.min.css",
+      "*.map",
+      "**/.next/**",
+      "**/.nuxt/**",
+      "**/coverage/**",
+      "**/__pycache__/**",
+      "*.pyc",
+      "**/.venv/**",
+      "**/venv/**",
+      "**/.gradle/**",
+      "**/target/debug/**",
+      "**/target/release/**",
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "bun.lockb",
+      "poetry.lock",
+      "uv.lock",
+      "Cargo.lock",
+      "composer.lock",
+      "Gemfile.lock"
+    ],
+    "prices": {}
+  },
+  "subagents": {
+    "max_per_session": 0,
+    "max_concurrent": 0,
+    "on_limit": "deny",
+    "models": {}
+  },
   "context": {
     "session_start": true,
     "git": true,

@@ -19,7 +19,7 @@ jobs:
         run: |
           tag="${GITHUB_REF_NAME#v}"
           grep -q "version = \"$tag\"" pyproject.toml
-          grep -q "__version__ = \"$tag\"" src/agentharness/__init__.py
+          grep -q "__version__ = \"$tag\"" src/harnesspro/__init__.py
           grep -q "\"version\": \"$tag\"" .claude-plugin/plugin.json
       - run: |
           git config --global user.email "ci@example.com"

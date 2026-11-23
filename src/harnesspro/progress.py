@@ -1,20 +1,3 @@
-"""Session-to-session handoff for long-running work.
-
-Each Claude Code session starts with an empty context. Following Anthropic's
-"effective harnesses for long-running agents" pattern, the harness keeps two
-files that outlive any session:
-
-``.claude/harness/features.json``
-    The work broken into features, each with a status and a ``passes`` flag
-    that only flips to true once the feature has been verified end to end.
-
-``.claude/harness/progress.md``
-    An append-only log of what each session did, decided and left next.
-
-The SessionStart hook injects a summary of both, so a fresh session (or one
-resumed after compaction) knows where to pick up.
-"""
-
 from __future__ import annotations
 
 import json
@@ -37,8 +20,6 @@ class Progress:
         self.dir = harness_dir
         self.features_path = os.path.join(harness_dir, "features.json")
         self.log_path = os.path.join(harness_dir, "progress.md")
-
-    # -- features ---------------------------------------------------------
 
     def load(self) -> Dict[str, Any]:
         try:
@@ -122,15 +103,7 @@ class Progress:
         out["passing"] = sum(1 for f in feats if f.get("passes"))
         return out
 
-    # -- plans ------------------------------------------------------------
-
     def import_plan(self, plan_path: str) -> List[Dict[str, Any]]:
-        """Add one feature per ``### Task N: Title`` heading in a plan.
-
-        Checkbox lines under a task (``- [ ] ...``) become its steps. Tasks
-        whose title already exists are skipped, so re-importing a plan after
-        editing it only adds the new tasks.
-        """
         with open(plan_path, encoding="utf-8") as fh:
             text = fh.read()
         tasks: List[Dict[str, Any]] = []
@@ -143,7 +116,7 @@ class Progress:
                 continue
             if current is None:
                 continue
-            if re.match(r"^#{1,3}\s", line):  # a non-task heading ends the task
+            if re.match(r"^#{1,3}\s", line):
                 current = None
                 continue
             step = re.match(r"^\s*[-*]\s+\[[ xX]\]\s+(.+)$", line)
@@ -160,8 +133,6 @@ class Progress:
                 continue
             added.append(self.add(t["title"], steps=t["steps"][:20]))
         return added
-
-    # -- log --------------------------------------------------------------
 
     def note(self, text: str, session_id: Optional[str] = None, heading: Optional[str] = None) -> None:
         text = text.strip()
@@ -187,15 +158,13 @@ class Progress:
             return ""
         start = text.find("\n### ")
         if start < 0:
-            return ""  # only the header, no entries yet
+            return ""
         text = text[start + 1 :]
         if len(text) <= max_chars:
             return text.strip()
         cut = text[-max_chars:]
         idx = cut.find("\n### ")
         return ("…\n" + (cut[idx + 1 :] if idx >= 0 else cut)).strip()
-
-    # -- summary for SessionStart -------------------------------------------
 
     def summary(self, max_chars: int = 3500) -> str:
         try:

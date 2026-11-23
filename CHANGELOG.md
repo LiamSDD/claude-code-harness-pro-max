@@ -2,11 +2,31 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-11-24
+
+Renamed to **Claude Code Harness Pro Max**. Plugin and skill id `harness-pro-max`, Python package `harness-pro-max` (module `harnesspro`), command `harness`.
+
+### Added
+
+- Token guards on `PreToolUse`: unchanged full re-reads (per agent, reset on clear and compaction), generated and vendored files (`cost.generated_paths`), oversized reads (`cost.max_read_bytes`), and context-flooding commands (`cat` of large files, `find /`, `tail -f`, `watch`, container and journal logs without limits, unbounded `git log`, recursive listings). Rules `token-duplicate-read`, `token-generated-read`, `token-large-read`, `token-output-flood`.
+- Subagent control: routing to a model per `subagent_type` through `updatedInput` (`subagents.models`), per-session and concurrency limits (`subagent-limit`, `subagent-concurrency`), tracking via `SubagentStart` and `SubagentStop`.
+- Session budgets: incremental spend from the session transcript (`cost.session_budget_usd`, `warn_at`, `on_budget`), shown in the status line.
+- `harness cost`: spend, tokens and cache hit rate by model, main session vs subagents, session and day, tool output volume, repeated reads, and ranked recommendations; editable prices (`cost.prices`).
+- `harness optimize`: `balanced` and `lean` profiles that set Claude Code limits (`BASH_MAX_OUTPUT_LENGTH`, `CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS`, `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`, `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, `CLAUDE_CODE_DISABLE_TERMINAL_TITLE`, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`), deny generated-file reads and route subagents; preview by default.
+- `harness upstream`: compares Claude Code's hooks reference with the events the harness handles and registers new ones.
+- Handlers for `SubagentStart`, `PostCompact`, `ConfigChange` (warns when harness hooks are removed), `PermissionDenied`, `StopFailure`, `PostModelSwitch`, `TaskCreated`, `TaskCompleted`, `InstructionsLoaded`; any unknown event is logged instead of failing.
+- Skills `orchestrating-agent-teams` and `optimizing-token-usage`; `explorer` subagent on haiku.
+
+### Changed
+
+- No comments or docstrings in code; documentation lives in Markdown.
+- `harness vet` patterns moved to `defaults/vet_rules.json`.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added
 
-- 14 engineering-workflow skills: `using-agent-harness`, `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development` (with implementer and task-review briefs), `test-driven-development` (with `writing-good-tests.md`), `systematic-debugging` (with root-cause tracing, defense in depth and condition-based waiting), `verification-before-completion`, `requesting-code-review`, `receiving-code-review`, `dispatching-parallel-agents`, `using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. Adapted from obra/superpowers (MIT) and integrated with the harness.
+- 14 engineering-workflow skills: `using-harness-pro-max`, `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development` (with implementer and task-review briefs), `test-driven-development` (with `writing-good-tests.md`), `systematic-debugging` (with root-cause tracing, defense in depth and condition-based waiting), `verification-before-completion`, `requesting-code-review`, `receiving-code-review`, `dispatching-parallel-agents`, `using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. Adapted from obra/superpowers (MIT) and integrated with the harness.
 - `implementer` subagent.
 - `harness vet`: supply-chain scanner for skills, plugins and repositories (hidden Unicode including tag smuggling, prompt injection, dangerous shell in scripts and code blocks via the policy engine, code execution, remote network calls, encoded blobs, secrets, binaries, escaping symlinks, hook commands and MCP servers), with counted inline suppression.
 - `harness skills list|check`: skill discovery and a linter for frontmatter, size, links and injection.
@@ -39,5 +59,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Subagents: `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. Skills: `feature-loop`, `session-handoff`, `release-check`, `harness-policy`.
 - Claude Code plugin manifest, hooks file and single-plugin marketplace.
 
-[1.1.0]: https://github.com/priveight02/agent-harness/releases/tag/v1.1.0
-[1.0.0]: https://github.com/priveight02/agent-harness/releases/tag/v1.0.0
+[2.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.0.0
+[1.1.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.1.0
+[1.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.0.0

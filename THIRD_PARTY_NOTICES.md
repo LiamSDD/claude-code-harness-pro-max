@@ -1,8 +1,6 @@
 # Third-party notices
 
-The following skills in `src/agentharness/templates/skills/` are adapted from **superpowers** (https://github.com/obra/superpowers, v7.0.2), rewritten to integrate with agent-harness: brainstorming, writing-plans, executing-plans, subagent-driven-development (and its brief templates), test-driven-development (and writing-good-tests.md), systematic-debugging (and its reference files), verification-before-completion, requesting-code-review, receiving-code-review, dispatching-parallel-agents, using-git-worktrees, finishing-a-development-branch, writing-skills, and the idea behind using-agent-harness. No code from superpowers is included.
-
-superpowers was reviewed with `harness vet` before use: no malicious code, hidden characters or injected instructions were found.
+The following skills in `src/harnesspro/templates/skills/` are adapted from **superpowers** (https://github.com/obra/superpowers, v7.0.2), rewritten to integrate with Claude Code Harness Pro Max: brainstorming, writing-plans, executing-plans, subagent-driven-development (and its brief templates), test-driven-development (and writing-good-tests.md), systematic-debugging (and its reference files), verification-before-completion, requesting-code-review, receiving-code-review, dispatching-parallel-agents, using-git-worktrees, finishing-a-development-branch, writing-skills, and the idea behind using-harness-pro-max. No code from superpowers is included.
 
 ---
 

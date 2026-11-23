@@ -1,4 +1,4 @@
-# agent-harness
+# Claude Code Harness Pro Max
 
 Guardrails, memory and verification for Claude Code, written in standard-library Python (3.9+). This repository is developed with its own harness (see `.claude/settings.json`).
 
@@ -11,12 +11,12 @@ Guardrails, memory and verification for Claude Code, written in standard-library
 
 ## Layout
 
-- `src/agentharness/shell.py`: shell tokenizer and command builder. Changes here need tests in `tests/test_shell.py`.
-- `src/agentharness/policy.py`: rules. Each rule has a stable id; never rename one.
-- `src/agentharness/hooks.py`: one handler per hook event; output must follow the Claude Code hook contract.
-- `src/agentharness/defaults/policy.json`: built-in policy. Validate with `./bin/harness policy validate`.
-- `src/agentharness/templates/`: CLAUDE.md template, subagents and skills shipped with the plugin and `harness init`. Lint with `./bin/harness skills check src/agentharness/templates/skills`.
-- `src/agentharness/vet.py`: supply-chain scanner. `./bin/harness vet .` must report 0 high findings.
+- `src/harnesspro/shell.py`: shell tokenizer and command builder. Changes here need tests in `tests/test_shell.py`.
+- `src/harnesspro/policy.py`: rules. Each rule has a stable id; never rename one.
+- `src/harnesspro/hooks.py`: one handler per hook event; output must follow the Claude Code hook contract.
+- `src/harnesspro/defaults/policy.json`: built-in policy. Validate with `./bin/harness policy validate`.
+- `src/harnesspro/templates/`: CLAUDE.md template, subagents and skills shipped with the plugin and `harness init`. Lint with `./bin/harness skills check src/harnesspro/templates/skills`.
+- `src/harnesspro/vet.py`: supply-chain scanner. `./bin/harness vet .` must report 0 high findings.
 
 ## Rules
 
@@ -25,6 +25,7 @@ Guardrails, memory and verification for Claude Code, written in standard-library
 - Every policy change needs a test for the blocked case and one for an everyday command that must stay allowed.
 - Never write a real-looking token in a test; use `helpers.fake(...)`.
 - Hooks must never crash Claude Code: catch, log to stderr, exit 1 (or deny when `fail_mode` is `closed`).
+- No comments or docstrings in code files. Explanations belong in `docs/` and the README.
 - Update `CHANGELOG.md` and `docs/policy.md` when behaviour changes.
 
 ## Progress

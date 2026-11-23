@@ -1,9 +1,3 @@
-"""Persistent state: the audit log and per-session counters.
-
-Hooks run as short-lived processes, sometimes in parallel (Claude can run
-several tools at once), so every write takes an advisory file lock.
-"""
-
 from __future__ import annotations
 
 import contextlib
@@ -16,8 +10,8 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from .secrets import redact_text
 
-try:  # POSIX
-    import fcntl  # type: ignore
+try:
+    import fcntl
 
     def _lock(fh) -> None:
         fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
@@ -25,8 +19,8 @@ try:  # POSIX
     def _unlock(fh) -> None:
         fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
-except ImportError:  # pragma: no cover - Windows
-    import msvcrt  # type: ignore
+except ImportError:
+    import msvcrt
 
     def _lock(fh) -> None:
         fh.seek(0)
@@ -59,14 +53,7 @@ def _atomic_write(path: str, text: str) -> None:
     os.replace(tmp, path)
 
 
-# --------------------------------------------------------------------------
-# Audit log (JSON Lines)
-# --------------------------------------------------------------------------
-
-
 class AuditLog:
-    """Append-only JSONL log with size-based rotation and secret redaction."""
-
     MAX_FIELD = 500
 
     def __init__(self, path: str, max_bytes: int = 5_000_000, keep: int = 3, enabled: bool = True):
@@ -138,16 +125,10 @@ class AuditLog:
         return out
 
 
-# --------------------------------------------------------------------------
-# Per-session state
-# --------------------------------------------------------------------------
-
 _SAFE_ID = re.compile(r"[^A-Za-z0-9_.-]")
 
 
 class SessionState:
-    """Counters and the list of files Claude edited in one session."""
-
     def __init__(self, harness_dir: str, session_id: Optional[str]):
         sid = _SAFE_ID.sub("_", session_id or "default")[:128]
         self.path = os.path.join(harness_dir, "state", f"{sid}.json")
@@ -182,7 +163,6 @@ class SessionState:
 
     @staticmethod
     def prune(harness_dir: str, max_age_days: int = 14) -> int:
-        """Delete state files older than ``max_age_days``. Returns count."""
         state_dir = os.path.join(harness_dir, "state")
         if not os.path.isdir(state_dir):
             return 0

@@ -1,17 +1,3 @@
-"""Static analysis of shell commands.
-
-Claude's Bash tool receives one string that may hold a whole script:
-pipelines, ``&&`` chains, subshells, command substitutions, heredocs and
-``bash -c`` wrappers. Matching a regex against that string is easy to fool
-(``cd x && rm -rf ~`` or ``bash -c 'curl ... | sh'``), so this module splits a
-command into the simple commands it would run, unwraps common wrappers
-(``sudo``, ``env``, ``timeout`` ...) and recurses into nested scripts.
-
-It is a conservative tokenizer, not a full POSIX parser. When it cannot make
-sense of the input it sets ``parse_error`` so the policy can ask instead of
-guessing.
-"""
-
 from __future__ import annotations
 
 import os
@@ -35,8 +21,6 @@ INTERPRETERS = SHELLS | {
     "lua",
 }
 
-# Wrappers that run another command. Value = number of positional args the
-# wrapper itself consumes before the wrapped command starts.
 _WRAPPERS = {
     "command": 0,
     "builtin": 0,
@@ -56,7 +40,6 @@ _WRAPPERS = {
     "chronic": 0,
 }
 
-# Options of wrappers that take a value.
 _WRAPPER_OPTS_WITH_VALUE = {
     "sudo": {"-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U"},
     "doas": {"-u", "-C"},
@@ -89,15 +72,13 @@ class Redirect:
 
 @dataclass
 class SimpleCommand:
-    """One command that the shell would execute."""
-
     argv: List[str]
     raw: str = ""
     redirects: List[Redirect] = field(default_factory=list)
     wrappers: List[str] = field(default_factory=list)
     assignments: List[str] = field(default_factory=list)
-    piped_from: Optional[str] = None  # name of the command feeding stdin
-    pipes_to: Optional[str] = None  # name of the command reading stdout
+    piped_from: Optional[str] = None
+    pipes_to: Optional[str] = None
     background: bool = False
     depth: int = 0
     heredoc: Optional[str] = None
@@ -116,7 +97,7 @@ class SimpleCommand:
     def sudo(self) -> bool:
         return "sudo" in self.wrappers or "doas" in self.wrappers
 
-    def __str__(self) -> str:  # pragma: no cover - debugging helper
+    def __str__(self) -> str:
         return " ".join(self.argv)
 
 
@@ -134,10 +115,6 @@ class ShellParseError(ValueError):
     pass
 
 
-# --------------------------------------------------------------------------
-# Tokenizer
-# --------------------------------------------------------------------------
-
 _OP = "OP"
 _WORD = "WORD"
 
@@ -146,11 +123,10 @@ _WORD = "WORD"
 class _Token:
     kind: str
     value: str
-    subs: List[str] = field(default_factory=list)  # $(...) / `...` / <(...) bodies
+    subs: List[str] = field(default_factory=list)
 
 
 def _find_closing_paren(s: str, start: int) -> int:
-    """Return index of the ')' that closes the '(' just before ``start``."""
     depth = 1
     i = start
     n = len(s)
@@ -179,7 +155,6 @@ def _find_closing_paren(s: str, start: int) -> int:
 
 
 def _skip_double_quoted(s: str, i: int) -> int:
-    """Given index just after an opening '"', return index after the closing '"'."""
     n = len(s)
     while i < n:
         c = s[i]
@@ -199,7 +174,7 @@ def _tokenize(s: str) -> List[_Token]:
     tokens: List[_Token] = []
     buf: List[str] = []
     subs: List[str] = []
-    has_word = False  # distinguishes "" (empty word) from no word
+    has_word = False
     i = 0
     n = len(s)
 
@@ -212,8 +187,6 @@ def _tokenize(s: str) -> List[_Token]:
     while i < n:
         c = s[i]
 
-        # [[ ... ]] is one test expression: |, &, < and > inside it are
-        # regex or comparison operators, not pipes or redirects.
         if not buf and not has_word and s.startswith("[[", i) and i + 2 < n and s[i + 2] in " \t":
             close = re.compile(r"\s\]\](?=\s|$|;|&|\||\))").search(s, i + 2)
             j = close.start() + 1 if close else -1
@@ -223,7 +196,6 @@ def _tokenize(s: str) -> List[_Token]:
                 i = j + 2
                 continue
 
-        # Comments start only at a word boundary.
         if c == "#" and not buf and not has_word:
             j = s.find("\n", i)
             i = n if j < 0 else j
@@ -231,7 +203,7 @@ def _tokenize(s: str) -> List[_Token]:
 
         if c == "\\":
             if i + 1 < n:
-                if s[i + 1] == "\n":  # line continuation
+                if s[i + 1] == "\n":
                     i += 2
                     continue
                 buf.append(s[i + 1])
@@ -291,7 +263,6 @@ def _tokenize(s: str) -> List[_Token]:
             continue
 
         if c in "<>" and i + 1 < n and s[i + 1] == "(" and not buf:
-            # process substitution <(...) / >(...)
             end = _find_closing_paren(s, i + 2)
             subs.append(s[i + 2 : end])
             buf.append(s[i : end + 1])
@@ -321,7 +292,6 @@ def _tokenize(s: str) -> List[_Token]:
             continue
 
         if c in ";&|()":
-            # "&>" and "&>>" are redirects, not separators.
             if c == "&" and i + 1 < n and s[i + 1] == ">":
                 flush()
                 if i + 2 < n and s[i + 2] == ">":
@@ -357,7 +327,6 @@ def _tokenize(s: str) -> List[_Token]:
             op = s[i:j]
             m = _REDIRECT.match(op)
             if not m:
-                # e.g. "<-" fall back to single char
                 op = c
                 j = i + 1
             tokens.append(_Token(_OP, fd + op))
@@ -372,10 +341,6 @@ def _tokenize(s: str) -> List[_Token]:
     return tokens
 
 
-# --------------------------------------------------------------------------
-# Command assembly
-# --------------------------------------------------------------------------
-
 _SEPARATORS = {"&&", "||", ";", "\n", "&", ";;", "(", ")"}
 _PIPES = {"|", "|&"}
 
@@ -385,7 +350,6 @@ def _strip_fd(op: str) -> str:
 
 
 def _unwrap(cmd: SimpleCommand) -> None:
-    """Remove leading assignments and wrappers like sudo/env/timeout."""
     argv = cmd.argv
     while argv:
         word = argv[0]
@@ -400,7 +364,6 @@ def _unwrap(cmd: SimpleCommand) -> None:
             cmd.wrappers.append(base)
             argv.pop(0)
             opts = _WRAPPER_OPTS_WITH_VALUE.get(base, set())
-            # skip options
             while argv and argv[0].startswith("-") and argv[0] != "-":
                 opt = argv.pop(0)
                 if opt == "--":
@@ -410,7 +373,6 @@ def _unwrap(cmd: SimpleCommand) -> None:
             if base == "env":
                 while argv and _ASSIGNMENT.match(argv[0]):
                     cmd.assignments.append(argv.pop(0))
-            # positional args consumed by the wrapper (e.g. timeout DURATION)
             for _ in range(_WRAPPERS[base]):
                 if argv:
                     argv.pop(0)
@@ -423,7 +385,6 @@ def _unwrap(cmd: SimpleCommand) -> None:
 
 
 def _build(tokens: List[_Token], source: str, depth: int) -> Tuple[List[SimpleCommand], List[str]]:
-    """Group tokens into simple commands. Returns (commands, nested scripts)."""
     commands: List[SimpleCommand] = []
     nested: List[str] = []
     current: List[str] = []
@@ -440,7 +401,7 @@ def _build(tokens: List[_Token], source: str, depth: int) -> Tuple[List[SimpleCo
             _unwrap(cmd)
             if not (cmd.argv or cmd.redirects or cmd.wrappers or cmd.assignments):
                 current, redirects = [], []
-                return  # e.g. a lone "}" closing a group
+                return
             if pending_pipe_from is not None:
                 cmd.piped_from = pending_pipe_from.name
                 pending_pipe_from.pipes_to = cmd.name
@@ -489,18 +450,13 @@ def _build(tokens: List[_Token], source: str, depth: int) -> Tuple[List[SimpleCo
             finish(op)
             i += 1
             continue
-        i += 1  # unknown operator, ignore
+        i += 1
 
     finish(None)
     return commands, nested
 
 
 def _extract_heredocs(script: str) -> Tuple[str, List[Tuple[str, str]]]:
-    """Cut heredoc bodies out of ``script``.
-
-    Returns the script without bodies and a list of (delimiter, body). Bodies
-    are data, not commands, unless they are fed to a shell.
-    """
     lines = script.split("\n")
     out_lines: List[str] = []
     bodies: List[Tuple[str, str]] = []
@@ -516,13 +472,12 @@ def _extract_heredocs(script: str) -> Tuple[str, List[Tuple[str, str]]]:
             while i < len(lines) and lines[i].strip() != delim:
                 body.append(lines[i])
                 i += 1
-            i += 1  # skip delimiter line
+            i += 1
             bodies.append((delim, "\n".join(body)))
     return "\n".join(out_lines), bodies
 
 
 def _inline_script(cmd: SimpleCommand) -> Optional[str]:
-    """Return the script string run by ``bash -c``, ``eval`` and friends."""
     name = cmd.name
     args = cmd.args
     if name in SHELLS:
@@ -533,12 +488,11 @@ def _inline_script(cmd: SimpleCommand) -> Optional[str]:
     if name == "eval" and args:
         return " ".join(args)
     if name in ("python", "python3") and "-c" in args:
-        return None  # python code, not shell
+        return None
     return None
 
 
 def analyze(command: str, _depth: int = 0) -> Analysis:
-    """Split ``command`` into the simple commands it runs, recursively."""
     if _depth > MAX_DEPTH:
         return Analysis(command, [], parse_error="nesting too deep")
     stripped, heredocs = _extract_heredocs(command)
@@ -552,7 +506,6 @@ def analyze(command: str, _depth: int = 0) -> Analysis:
     commands, nested = _build(tokens, stripped, _depth)
     result = Analysis(command, list(commands))
 
-    # Heredoc bodies fed to a shell are scripts too.
     if heredocs:
         hd_iter = iter(heredocs)
         for cmd in commands:
@@ -570,7 +523,6 @@ def analyze(command: str, _depth: int = 0) -> Analysis:
         script = _inline_script(cmd)
         if script:
             nested.append(script)
-        # here-strings to a shell: bash <<< "rm -rf /"
         if cmd.name in SHELLS:
             for r in cmd.redirects:
                 if r.op == "<<<" and r.target:
@@ -585,7 +537,6 @@ def analyze(command: str, _depth: int = 0) -> Analysis:
 
 
 def expand_user_path(arg: str, home: Optional[str] = None) -> str:
-    """Expand ``~`` and ``$HOME`` the way a shell would for path checks."""
     home = home or os.path.expanduser("~")
     if arg == "~" or arg.startswith("~/"):
         arg = home + arg[1:]
@@ -596,7 +547,6 @@ def expand_user_path(arg: str, home: Optional[str] = None) -> str:
 
 
 def path_like_args(cmd: SimpleCommand) -> List[str]:
-    """Arguments of ``cmd`` that may name files (options' values included)."""
     out: List[str] = []
     for a in cmd.args:
         if not a:
@@ -605,7 +555,7 @@ def path_like_args(cmd: SimpleCommand) -> List[str]:
             if "=" in a:
                 out.append(a.split("=", 1)[1])
             continue
-        if a.startswith("@") and len(a) > 1:  # curl -d @file
+        if a.startswith("@") and len(a) > 1:
             out.append(a[1:])
             continue
         out.append(a)

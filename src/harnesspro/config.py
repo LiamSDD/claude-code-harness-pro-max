@@ -1,18 +1,3 @@
-"""Policy loading, layering and validation.
-
-Layers, lowest to highest precedence::
-
-    built-in defaults        src/agentharness/defaults/policy.json
-    user                     ~/.claude/harness/policy.json
-    project (committed)      <project>/.claude/harness/policy.json
-    project local (personal) <project>/.claude/harness/policy.local.json
-    environment              HARNESS_POLICY=/path/to/policy.json
-
-Objects merge key by key. Lists are appended (duplicates dropped) so a layer
-can add rules without copying the defaults. To replace a list instead, suffix
-the key with ``!``, e.g. ``"deny_read!": ["*.pem"]``. Scalars override.
-"""
-
 from __future__ import annotations
 
 import copy
@@ -32,7 +17,6 @@ class PolicyError(ValueError):
 
 
 def project_dir(payload: Optional[dict] = None) -> str:
-    """Resolve the project root the way Claude Code does for hooks."""
     env = os.environ.get("CLAUDE_PROJECT_DIR")
     if env:
         return os.path.abspath(env)
@@ -76,7 +60,7 @@ def _read_json(path: str) -> Dict[str, Any]:
 def merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
     out = copy.deepcopy(base)
     for key, value in over.items():
-        if key.startswith("$"):  # "$schema", "$comment"
+        if key.startswith("$"):
             continue
         replace = key.endswith("!")
         k = key[:-1] if replace else key
@@ -95,15 +79,18 @@ def merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-# --------------------------------------------------------------------------
-# Validation
-# --------------------------------------------------------------------------
-
 _STR = str
 _BOOL = bool
 _INT = int
 _LIST = list
 _DICT = dict
+
+
+class _Number:
+    pass
+
+
+_NUM = _Number
 
 SCHEMA: Dict[str, Any] = {
     "version": _INT,
@@ -140,6 +127,18 @@ SCHEMA: Dict[str, Any] = {
         "max_blocks": _INT,
     },
     "verify_claims": {"enabled": _BOOL, "max_blocks": _INT, "test_commands": [_STR]},
+    "cost": {
+        "session_budget_usd": _NUM,
+        "warn_at": _NUM,
+        "on_budget": DECISIONS,
+        "read_dedupe": _BOOL,
+        "max_read_bytes": _INT,
+        "output_guard": DECISIONS,
+        "generated_reads": DECISIONS,
+        "generated_paths": [_STR],
+        "prices": _DICT,
+    },
+    "subagents": {"max_per_session": _INT, "max_concurrent": _INT, "on_limit": DECISIONS, "models": _DICT},
     "context": {
         "session_start": _BOOL,
         "git": _BOOL,
@@ -155,10 +154,14 @@ SCHEMA: Dict[str, Any] = {
 
 
 def _type_name(t: Any) -> str:
-    return {str: "string", bool: "boolean", int: "integer", list: "array", dict: "object"}.get(t, str(t))
+    return {str: "string", bool: "boolean", int: "integer", list: "array", dict: "object", _NUM: "number"}.get(t, str(t))
 
 
 def _check(value: Any, schema: Any, where: str, errors: List[str]) -> None:
+    if schema is _NUM:
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            errors.append(f"{where}: expected number")
+        return
     if isinstance(schema, dict):
         if not isinstance(value, dict):
             errors.append(f"{where}: expected object")
@@ -224,11 +227,6 @@ def validate(policy: Dict[str, Any], where: str = "policy") -> List[str]:
     return errors
 
 
-# --------------------------------------------------------------------------
-# Loaded policy
-# --------------------------------------------------------------------------
-
-
 @dataclass
 class LoadedPolicy:
     data: Dict[str, Any]
@@ -257,11 +255,6 @@ def load_defaults() -> Dict[str, Any]:
 
 
 def load_policy(project: Optional[str] = None, strict: bool = False) -> LoadedPolicy:
-    """Load and merge every policy layer for ``project``.
-
-    With ``strict`` a broken layer raises; otherwise it is skipped and the
-    error is recorded so ``harness doctor`` can report it.
-    """
     project = os.path.abspath(project or project_dir())
     data = load_defaults()
     sources = ["defaults"]

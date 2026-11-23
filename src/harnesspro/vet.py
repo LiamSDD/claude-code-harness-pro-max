@@ -1,36 +1,17 @@
-"""``harness vet``: supply-chain checks for skills, plugins and agent configs.
-
-A skill or plugin is code and instructions that run with your permissions.
-Before installing one, vet scans it for what an attacker or a careless
-author would hide in it:
-
-* invisible characters (zero-width, bidirectional overrides, Unicode tags)
-  that hide text from a human reviewer but not from the model,
-* prompt-injection phrasing aimed at the agent,
-* dangerous shell, both in scripts and in Markdown code blocks the agent is
-  told to run, judged by the same policy engine that guards tool calls,
-* dynamic code execution and network calls in bundled code,
-* encoded payloads, credentials, binaries and symlinks escaping the folder,
-* hook commands and MCP servers a plugin would register.
-
-Exit status: 0 clean or info only, 1 high-severity findings
-(``--strict``: also medium).
-"""
-
 from __future__ import annotations
 
 import json
 import os
 import re
 from dataclasses import asdict, dataclass
-from typing import Iterable, List
+from typing import Iterable, List, Pattern, Tuple
 
 from . import secrets as secretlib
 from .config import LoadedPolicy, load_defaults
 from .policy import ASK, DENY, Context, evaluate_bash
 
 HIGH, MEDIUM, INFO = "high", "medium", "info"
-SUPPRESS_MARKER = "harness-vet: " + "ignore"  # split so this line is not itself a marker
+SUPPRESS_MARKER = "harness-vet: " + "ignore"
 _ORDER = {HIGH: 0, MEDIUM: 1, INFO: 2}
 
 TEXT_EXTS = {
@@ -73,7 +54,6 @@ SHELL_EXTS = {".sh", ".bash", ".zsh"}
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", ".ruff_cache", ".mypy_cache", ".pytest_cache", ".tox", "dist", "build"}
 MAX_BYTES = 1_000_000
 
-# Characters invisible in most editors and diff views.
 _HIDDEN = re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\U000e0000-\U000e007f]")
 _HIDDEN_NAMES = {
     "\u200b": "ZERO WIDTH SPACE",
@@ -90,78 +70,17 @@ _HIDDEN_NAMES = {
     "\ufeff": "ZERO WIDTH NO-BREAK SPACE",
 }
 
-_INJECTION = [
-    (
-        re.compile(
-            r"(?i)\b(ignore|disregard|forget|override)\b.{0,30}\b(all |any )?(previous|prior|above|earlier|system|developer)\b.{0,20}\b(instructions?|prompts?|rules?|messages?)"
-        ),
-        HIGH,
-        "instruction override",
-    ),
-    (
-        re.compile(
-            r"(?i)\b(do not|don't|never)\s+(tell|inform|show|mention|reveal|alert|notify|let)\b.{0,15}\b(the )?(user|human|operator)\b(?!\s+(what|why|how))"
-        ),
-        HIGH,
-        "hide actions from the user",
-    ),
-    (re.compile(r"(?i)\bwithout (asking|telling|notifying|confirming with) the (user|human)"), MEDIUM, "act without the user's knowledge"),
-    (re.compile(r"(?i)</?(system|system-reminder|assistant|human|im_start|im_end)>"), MEDIUM, "fake conversation or system markup"),
-    (re.compile(r"(?i)\byou are (now|no longer)\b.{0,40}\b(unrestricted|jailbroken|dan|developer mode|not bound)"), HIGH, "role hijack"),
-    (
-        re.compile(
-            r"(?i)\b(exfiltrate|upload|send|post)\b.{0,40}\b(\.env|credentials?|secrets?|api[_ -]?keys?|ssh keys?|tokens?|cookies)\b.{0,40}\b(to|https?://)"
-        ),
-        HIGH,
-        "credential exfiltration",
-    ),
-    (
-        re.compile(
-            r"(?i)\b(disable|turn off|bypass|skip)\b.{0,25}\b(the )?(harness|hooks?|guardrails?|sandbox|permission prompts?|safety checks?)"
-        ),
-        MEDIUM,
-        "disable safety controls",
-    ),
-    (
-        re.compile(r"(?i)--dangerously-skip-permissions|bypassPermissions|\"defaultMode\"\s*:\s*\"(bypassPermissions|dontAsk)\""),
-        MEDIUM,
-        "permission bypass",
-    ),
-]
+_RULES_PATH = os.path.join(os.path.dirname(__file__), "defaults", "vet_rules.json")
 
-_CODE_PATTERNS = [
-    (re.compile(r"\beval\s*\("), MEDIUM, "eval()"),  # harness-vet: ignore
-    (re.compile(r"\bnew\s+Function\s*\("), MEDIUM, "new Function()"),  # harness-vet: ignore
-    (re.compile(r"\bexec\s*\(\s*(compile|base64|bytes|codecs|zlib|marshal)"), HIGH, "exec of decoded data"),  # harness-vet: ignore
-    (
-        re.compile(r"\b(child_process|require\(['\"]child_process['\"]\))[\s\S]{0,80}\b(exec|execSync)\s*\("),  # harness-vet: ignore
-        MEDIUM,
-        "shell execution (child_process.exec)",
-    ),
-    (
-        re.compile(r"\bos\.system\s*\(|\bsubprocess\.[a-z_]+\([^)]*shell\s*=\s*True"),  # harness-vet: ignore
-        MEDIUM,
-        "shell execution (Python)",
-    ),
-    (
-        re.compile(r"\b(atob|b64decode|base64\.b64decode|Buffer\.from\([^)]*['\"]base64['\"])"),  # harness-vet: ignore
-        INFO,
-        "base64 decoding",
-    ),
-    (
-        re.compile(  # harness-vet: ignore
-            r"\b(fetch|axios\.[a-z]+|https?\.(get|request)|urllib\.request\.urlopen|requests\.(get|post|put))\s*\(\s*['\"`]https?://(?!localhost|127\.0\.0\.1)"
-        ),
-        MEDIUM,
-        "network request to a remote host",
-    ),
-    (
-        re.compile(r"(?i)\b(Invoke-WebRequest|Invoke-Expression|iex\s*\(|DownloadString)\b"),  # harness-vet: ignore
-        HIGH,
-        "PowerShell download/execute",
-    ),
-    (re.compile(r"/dev/tcp/|\bnc\s+-e\b|\bbash\s+-i\s*>&"), HIGH, "reverse shell"),  # harness-vet: ignore
-]
+
+def _load_rules(kind: str) -> List[Tuple[Pattern[str], str, str]]:
+    with open(_RULES_PATH, encoding="utf-8") as fh:
+        rules = json.load(fh)[kind]
+    return [(re.compile(r["pattern"]), r["severity"], r["label"]) for r in rules]
+
+
+_INJECTION = _load_rules("injection")
+_CODE_PATTERNS = _load_rules("code")
 
 _BLOB = re.compile(r"[A-Za-z0-9+/]{200,}={0,2}")
 _FENCE = re.compile(r"^(```|~~~)\s*(bash|sh|shell|zsh|console)?\s*$")
@@ -184,7 +103,6 @@ class Vetter:
     def __init__(self, root: str):
         self.root = os.path.abspath(root)
         self.findings: List[VetFinding] = []
-        # Judge shell with the built-in defaults, never the scanned folder's own policy.
         policy = LoadedPolicy(data=load_defaults(), project=self.root, sources=["defaults"])
         self.ctx = Context(policy, self.root)
         self.files_scanned = 0
@@ -192,7 +110,6 @@ class Vetter:
         self._lines = {}
 
     def _suppressed(self, path: str, line: int) -> bool:
-        """``harness-vet: ignore`` on the same line silences that line (counted)."""
         if path not in self._lines:
             try:
                 with open(path, encoding="utf-8", errors="replace") as fh:
@@ -208,8 +125,6 @@ class Vetter:
             return
         rel = os.path.relpath(path, self.root) if os.path.isabs(path) else path
         self.findings.append(VetFinding(severity, rule, rel, line, secretlib.redact_text(detail, max_len=200)))
-
-    # -- walking -----------------------------------------------------------
 
     def files(self) -> Iterable[str]:
         if os.path.isfile(self.root):
@@ -231,8 +146,6 @@ class Vetter:
             self.add(HIGH, "symlink-escape", path, 0, f"symlink points outside the folder: {target}")
             return True
         return False
-
-    # -- per file ------------------------------------------------------------
 
     def scan(self) -> List[VetFinding]:
         for path in self.files():
@@ -284,7 +197,7 @@ class Vetter:
             if not hits:
                 continue
             if set(hits) == {"\ufeff"} and lineno == 1 and line.startswith("\ufeff"):
-                continue  # byte-order mark at file start
+                continue
             names = sorted({_HIDDEN_NAMES.get(h, f"U+{ord(h):04X}") for h in hits})
             tags = [h for h in hits if "\U000e0000" <= h <= "\U000e007f"]
             detail = ", ".join(names)
@@ -306,7 +219,6 @@ class Vetter:
             for rx, sev, label in _INJECTION:
                 if rx.search(line):
                     if in_fence:
-                        # Quoted as code (an example or tool output): still reported, for review.
                         self.add(MEDIUM, "prompt-injection", path, lineno, f"{label} (inside a code block): {line.strip()[:120]}")
                     else:
                         self.add(sev, "prompt-injection", path, lineno, f"{label}: {line.strip()[:140]}")
@@ -342,7 +254,7 @@ class Vetter:
                     for offset, cmd in enumerate(buf, 1):
                         if lang == "console":
                             if not cmd.lstrip().startswith("$ "):
-                                continue  # output, not a command
+                                continue
                             cmd = cmd.lstrip()[2:]
                         self._judge_shell(path, start + offset, cmd, "code block")
                 in_block = False
@@ -351,8 +263,6 @@ class Vetter:
                 buf.append(line)
 
     def _shell_script(self, path: str, text: str) -> None:
-        # Judge line by line so findings point at the right place; joined
-        # continuation lines are judged together.
         logical, first = "", 0
         for lineno, line in enumerate(text.splitlines(), 1):
             if not logical:

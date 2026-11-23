@@ -1,6 +1,3 @@
-"""Shared test helpers. Every test runs in a throwaway project directory with
-an isolated user config, so nothing on the developer's machine leaks in."""
-
 import json
 import os
 import shutil
@@ -18,11 +15,6 @@ BIN = os.path.join(ROOT, "bin", "harness")
 
 
 def fake(*parts):
-    """Build a credential-shaped string at runtime.
-
-    Real-looking tokens never appear literally in the repository, so secret
-    scanners and push protection do not flag the test suite.
-    """
     return "".join(parts)
 
 
@@ -34,8 +26,6 @@ FAKE_PRIVATE_KEY = fake("-----BEGIN ", "RSA PRIVATE", " KEY-----\nMIIEpAIBAAKCAQ
 
 
 class ProjectTestCase(unittest.TestCase):
-    """A temp project with git, and HOME/CLAUDE_CONFIG_DIR isolated."""
-
     git = True
 
     def setUp(self):
@@ -96,7 +86,7 @@ class ProjectTestCase(unittest.TestCase):
         return base
 
     def hook(self, event, **fields):
-        from agentharness.hooks import dispatch
+        from harnesspro.hooks import dispatch
 
         result = dispatch(event, json.dumps(self.payload(event, **fields)))
         out = json.loads(result.stdout) if result.stdout.strip().startswith("{") else result.stdout

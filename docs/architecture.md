@@ -4,12 +4,17 @@
 
 An agent is a model running in a loop: it reads context, chooses a tool call, observes the result and repeats until it decides it is done. The **harness** is everything around the model that makes that loop safe and productive: which tools exist, what they may touch, what context the model sees, how state survives between runs, and how the result is checked.
 
-Claude Code is itself a harness: it provides the loop, the tools, context compaction, permission prompts and extension points (hooks, subagents, skills, MCP, plugins). agent-harness uses those extension points to add four things teams usually build by hand:
+Claude Code is itself a harness: it provides the loop, the tools, context compaction, permission prompts and extension points (hooks, subagents, skills, MCP, plugins). Harness Pro Max uses those extension points to add what teams usually build by hand:
 
 1. **Governance**: a policy that understands shell commands, file paths, URLs and MCP tools, with an audit trail.
 2. **Memory**: state that outlives a context window (features, progress log, checkpoints) injected at the right moments.
 3. **Verification**: a gate that runs real tests before the agent may declare victory, plus an evaluator subagent that is not the author.
 4. **Observability**: audit log, statistics and a status line.
+5. **Economy**: token guards, subagent routing and limits, session budgets and cost analytics.
+
+## Where the cost goes
+
+Each request sends the whole conversation. With prompt caching most of it is billed at the cache-read rate, but it is billed on every request, so a 40 KB tool result read at turn 10 is paid for again on every one of the following turns. The economy layer therefore acts on what enters the context (re-reads, generated files, flooding output), on which model pays for it (subagent routing), and on how much fan-out happens (subagent limits), and measures the effect from the transcripts Claude Code already writes.
 
 ## Flow of one tool call
 
@@ -47,7 +52,10 @@ sequenceDiagram
 | `gitinfo.py` | Branch, ahead/behind, changes, recent commits |
 | `installer.py` / `settings_merge.py` | `harness init`: profiles, test-command detection, idempotent merge |
 | `doctor.py` | Checks that run the configured hook for real |
-| `vet.py` | Supply-chain scanner for skills, plugins and repositories |
+| `economy.py` | Token guards, budget check, subagent limits and routing |
+| `cost.py` | Transcript analytics, pricing, recommendations, incremental spend meter |
+| `tuning.py` | `harness optimize` profiles and `harness upstream` |
+| `vet.py` | Supply-chain scanner for skills, plugins and repositories (patterns in `defaults/vet_rules.json`) |
 | `skills.py` | Skill discovery, frontmatter parser and linter |
 | `statusline.py` | Status line renderer |
 

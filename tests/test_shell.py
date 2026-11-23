@@ -1,8 +1,10 @@
 import unittest
 
-from helpers import SRC  # noqa: F401  (sets sys.path)
+import sys
 
-from agentharness.shell import analyze
+from helpers import SRC
+
+from harnesspro.shell import analyze
 
 
 def names(cmd):
@@ -10,6 +12,9 @@ def names(cmd):
 
 
 class TokenizerTests(unittest.TestCase):
+    def test_source_tree_is_importable(self):
+        self.assertIn(SRC, sys.path)
+
     def test_simple(self):
         a = analyze("ls -la /tmp")
         self.assertEqual(a.commands[0].argv, ["ls", "-la", "/tmp"])
@@ -115,7 +120,7 @@ class ErrorTests(unittest.TestCase):
         cmd = "ls"
         for _ in range(10):
             cmd = f"bash -c {repr(cmd)}"
-        analyze(cmd)  # must not recurse forever
+        analyze(cmd)
 
 
 if __name__ == "__main__":

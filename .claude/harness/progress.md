@@ -17,3 +17,11 @@ Adapted the engineering workflows from obra/superpowers (MIT) after vetting it: 
 New enforcement: harness vet (supply chain), skills check (lint), and the Stop claim check. While building vet it caught invisible characters that an editing tool had written into vet.py itself; the source is now ASCII-escaped and a test guards it.
 
 Next: #8 JSON Schema for policy files.
+
+### 2026-11-23 23:27 · v2.0.0
+
+Renamed to Claude Code Harness Pro Max. Added the economy layer (token guards, subagent routing and limits, session budgets), harness cost / optimize / upstream, handlers for nine more hook events with a logging fallback for unknown ones, and two skills plus the explorer subagent. Code files carry no comments or docstrings.
+
+Measured on real sessions: cache reads dominate Claude Code cost, so the guards target what enters the context.
+
+Next: #8 JSON Schema for policy files.

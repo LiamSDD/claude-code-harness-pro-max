@@ -4,7 +4,7 @@ import unittest
 
 from helpers import ProjectTestCase
 
-from agentharness import installer, settings_merge
+from harnesspro import installer, settings_merge
 
 
 class MergeTests(unittest.TestCase):

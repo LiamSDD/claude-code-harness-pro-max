@@ -60,7 +60,7 @@ jobs:
           python-version: "3.12"
       - name: Validate JSON manifests
         run: |
-          for f in .claude-plugin/*.json hooks/hooks.json .claude/settings.json src/agentharness/defaults/policy.json examples/*.json; do
+          for f in .claude-plugin/*.json hooks/hooks.json .claude/settings.json src/harnesspro/defaults/policy.json examples/*.json; do
             python -m json.tool "$f" > /dev/null && echo "ok $f"
           done
       - name: Plugin paths exist
@@ -74,7 +74,7 @@ jobs:
       - name: No secrets in the source tree
         run: ./bin/harness scan --high-only src hooks bin .claude-plugin docs examples
       - name: Skills lint clean
-        run: ./bin/harness skills check --strict src/agentharness/templates/skills SKILL.md
+        run: ./bin/harness skills check --strict src/harnesspro/templates/skills SKILL.md
       - name: Repository vets clean (no high findings)
         run: ./bin/harness vet .
       - name: Build and install the wheel

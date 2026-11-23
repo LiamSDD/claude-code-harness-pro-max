@@ -3,13 +3,13 @@
 ## Setup
 
 ```bash
-git clone https://github.com/priveight02/agent-harness && cd agent-harness
+git clone https://github.com/priveight02/claude-code-harness-pro-max && cd claude-code-harness-pro-max
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 make check
 ```
 
-The package has no runtime dependencies and supports Python 3.9 to 3.13. Keep it that way: hooks start a fresh interpreter on every tool call, so every import costs latency.
+Code files contain no comments or docstrings; document behaviour in `docs/`. The package has no runtime dependencies and supports Python 3.9 to 3.13. Keep it that way: hooks start a fresh interpreter on every tool call, so every import costs latency.
 
 ## Making a change
 
@@ -27,6 +27,6 @@ Never put a real-looking token in a test. Build it at runtime with `helpers.fake
 
 ## Releasing
 
-1. Bump the version in `pyproject.toml`, `src/agentharness/__init__.py` and `.claude-plugin/plugin.json`.
+1. Bump the version in `pyproject.toml`, `src/harnesspro/__init__.py` and `.claude-plugin/plugin.json`.
 2. Move `Unreleased` entries in `CHANGELOG.md` under the new version.
 3. Tag `vX.Y.Z` and push the tag; the release workflow tests, builds and attaches the artifacts.

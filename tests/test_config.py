@@ -4,8 +4,8 @@ import unittest
 
 from helpers import ProjectTestCase
 
-from agentharness.config import PolicyError, load_defaults, load_policy, merge, validate
-from agentharness.pathmatch import PathMatcher, glob_to_regex
+from harnesspro.config import PolicyError, load_defaults, load_policy, merge, validate
+from harnesspro.pathmatch import PathMatcher, glob_to_regex
 
 
 class MergeTests(unittest.TestCase):

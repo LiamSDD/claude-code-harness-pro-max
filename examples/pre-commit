@@ -1,4 +1,2 @@
 #!/bin/sh
-# Block commits that contain credentials. Install:
-#   cp examples/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 exec harness scan --staged --high-only

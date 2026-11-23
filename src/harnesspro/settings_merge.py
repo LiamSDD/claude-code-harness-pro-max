@@ -1,10 +1,3 @@
-"""Idempotent merging of harness config into Claude Code ``settings.json``.
-
-``harness init`` must never clobber what a team already has: existing hooks,
-permission rules and keys are kept, harness entries are added once, and a
-second run changes nothing.
-"""
-
 from __future__ import annotations
 
 import copy
@@ -20,7 +13,6 @@ def _hook_commands(group: Dict[str, Any]) -> List[str]:
 
 
 def merge_hooks(existing: Dict[str, Any], fragment: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
-    """Add fragment hook groups that are not already present. Returns (hooks, added)."""
     out = copy.deepcopy(existing) if isinstance(existing, dict) else {}
     added = 0
     for event, groups in fragment.items():
@@ -63,7 +55,6 @@ def merge_permissions(existing: Dict[str, Any], fragment: Dict[str, Any]) -> Tup
 
 
 def merge_settings(existing: Dict[str, Any], fragment: Dict[str, Any], force: bool = False) -> Tuple[Dict[str, Any], List[str]]:
-    """Return the merged settings and a human-readable list of changes."""
     out = copy.deepcopy(existing)
     changes: List[str] = []
     for key, value in fragment.items():

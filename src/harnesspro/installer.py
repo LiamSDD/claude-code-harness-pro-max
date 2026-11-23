@@ -1,16 +1,3 @@
-"""``harness init``: install the harness into a project.
-
-Writes (never overwriting user content):
-
-* ``.claude/settings.json``          hooks, status line, permission rules (merged)
-* ``.claude/harness/policy.json``    profile policy, only if absent
-* ``.claude/harness/.gitignore``     keeps logs and session state out of git
-* ``.claude/harness/progress.md``    handoff log (committed)
-* ``.claude/agents/*.md``            reviewer, test runner, security auditor, planner, evaluator
-* ``.claude/skills/*/SKILL.md``      feature loop, session handoff, release check, policy tuning
-* ``CLAUDE.md``                      project memory template, only if absent
-"""
-
 from __future__ import annotations
 
 import json
@@ -24,12 +11,22 @@ from . import settings_merge
 
 TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 PROFILES = ("minimal", "standard", "strict")
+OBSERVED_EVENTS = (
+    "SubagentStart",
+    "PostCompact",
+    "ConfigChange",
+    "PermissionDenied",
+    "StopFailure",
+    "PostModelSwitch",
+    "TaskCreated",
+    "TaskCompleted",
+    "InstructionsLoaded",
+)
 
-PRETOOL_MATCHER = "Bash|Read|Write|Edit|MultiEdit|NotebookEdit|Grep|WebFetch|mcp__.*"
+PRETOOL_MATCHER = "Bash|Read|Write|Edit|MultiEdit|NotebookEdit|Grep|WebFetch|Agent|Task|mcp__.*"
 
 
 def detect_test_command(project: str) -> Optional[str]:
-    """Best guess at the project's test command, used for the stop gate."""
 
     def exists(*parts: str) -> bool:
         return os.path.exists(os.path.join(project, *parts))
@@ -88,7 +85,7 @@ def _file_contains(path: str, needle: str) -> bool:
 def default_hook_command() -> str:
     if shutil.which("harness"):
         return "harness"
-    return f'"{sys.executable}" -m agentharness'
+    return f'"{sys.executable}" -m harnesspro'
 
 
 def settings_fragment(profile: str, hook_cmd: str, stop_timeout: int = 300) -> Dict[str, Any]:
@@ -112,6 +109,8 @@ def settings_fragment(profile: str, hook_cmd: str, stop_timeout: int = 300) -> D
                 "Notification": [{"hooks": [h("Notification", 10)]}],
             }
         )
+        for event in OBSERVED_EVENTS:
+            hooks[event] = [{"hooks": [h(event, 10)]}]
     fragment: Dict[str, Any] = {
         "$schema": "https://json.schemastore.org/claude-code-settings.json",
         "hooks": hooks,
@@ -136,7 +135,7 @@ def settings_fragment(profile: str, hook_cmd: str, stop_timeout: int = 300) -> D
 
 def profile_policy(profile: str, test_command: Optional[str]) -> Dict[str, Any]:
     policy: Dict[str, Any] = {
-        "$comment": "agent-harness policy. Layers over the built-in defaults; see `harness policy show`.",
+        "$comment": "Harness Pro Max policy. Layers over the built-in defaults; see `harness policy show`.",
         "version": 1,
         "mode": "enforce",
     }
@@ -157,8 +156,7 @@ def profile_policy(profile: str, test_command: Optional[str]) -> Dict[str, Any]:
     return policy
 
 
-HARNESS_GITIGNORE = """# agent-harness: machine-local files
-audit.jsonl
+HARNESS_GITIGNORE = """audit.jsonl
 audit.jsonl.*
 state/
 *.lock
@@ -226,7 +224,6 @@ def init_project(
     claude_dir = os.path.join(project, ".claude")
     hdir = os.path.join(claude_dir, "harness")
 
-    # settings.json
     settings_path = os.path.join(claude_dir, "settings.json")
     existing = settings_merge.load(settings_path)
     merged, changes = settings_merge.merge_settings(existing, settings_fragment(profile, hook_cmd), force=force)
@@ -238,7 +235,6 @@ def init_project(
     else:
         report.skipped.append(settings_path)
 
-    # policy and harness files
     policy_path = os.path.join(hdir, "policy.json")
     _write_if_absent(policy_path, json.dumps(profile_policy(profile, test_cmd), indent=2) + "\n", report, dry_run)
     _write_if_absent(os.path.join(hdir, ".gitignore"), HARNESS_GITIGNORE, report, dry_run)
@@ -249,12 +245,10 @@ def init_project(
         dry_run,
     )
 
-    # agents and skills
     if with_agents:
         _copy_tree_if_absent(os.path.join(TEMPLATES, "agents"), os.path.join(claude_dir, "agents"), report, dry_run)
         _copy_tree_if_absent(os.path.join(TEMPLATES, "skills"), os.path.join(claude_dir, "skills"), report, dry_run)
 
-    # CLAUDE.md
     with open(os.path.join(TEMPLATES, "CLAUDE.md"), encoding="utf-8") as fh:
         template = fh.read().replace("{{TEST_COMMAND}}", test_cmd or "<add your test command>")
     _write_if_absent(os.path.join(project, "CLAUDE.md"), template, report, dry_run)

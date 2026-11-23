@@ -4,7 +4,7 @@ import unittest
 
 from helpers import FAKE_ANTHROPIC, FAKE_AWS_ID, FAKE_GITHUB, FAKE_PRIVATE_KEY, FAKE_STRIPE, fake
 
-from agentharness import secrets
+from harnesspro import secrets
 
 
 class DetectorTests(unittest.TestCase):

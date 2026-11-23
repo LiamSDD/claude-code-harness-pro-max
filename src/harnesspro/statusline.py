@@ -1,15 +1,3 @@
-"""Status line for Claude Code.
-
-Configure with::
-
-    "statusLine": {"type": "command", "command": "harness statusline"}
-
-Claude Code pipes session JSON to stdin and shows the first lines printed.
-Output example::
-
-    main* ↑1 · Opus · ctx 38% · $0.42 · 12m · guard 2 denied · 3/7 features
-"""
-
 from __future__ import annotations
 
 import json
@@ -17,7 +5,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from . import gitinfo
-from .config import harness_dir
+from .config import harness_dir, load_policy
 from .progress import Progress, ProgressError
 from .store import SessionState
 
@@ -94,8 +82,16 @@ def render(data: Dict[str, Any], color: Optional[bool] = None) -> str:
     if os.path.isdir(hdir):
         state = SessionState(hdir, data.get("session_id")).load()
         denied = state.get("denied", 0)
-        if denied:
-            parts.append(_color(color, YELLOW, f"guard {denied} denied"))
+        saved = state.get("saved_calls", 0)
+        if denied - saved > 0:
+            parts.append(_color(color, YELLOW, f"guard {denied - saved} blocked"))
+        if saved:
+            parts.append(_color(color, GREEN, f"saved {saved} calls"))
+        budget = float(load_policy(cwd).get("cost.session_budget_usd") or 0)
+        if budget > 0:
+            spent = float(cost if isinstance(cost, (int, float)) else state.get("cost_usd", 0.0))
+            code = GREEN if spent < budget * 0.8 else YELLOW if spent < budget else RED
+            parts.append(_color(color, code, f"budget ${spent:.2f}/${budget:.2f}"))
         try:
             counts = Progress(hdir).counts()
             if counts["total"]:

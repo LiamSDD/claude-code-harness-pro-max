@@ -1,11 +1,3 @@
-"""The policy engine: tool call in, allow / ask / deny out.
-
-``evaluate(tool_name, tool_input, policy, cwd)`` returns a :class:`Verdict`
-listing every rule that fired. The strictest decision wins
-(deny > ask > allow). Rules are identified by stable ids so a project can
-switch one off with ``"disable": ["git-destructive"]``.
-"""
-
 from __future__ import annotations
 
 import fnmatch
@@ -57,8 +49,6 @@ class Verdict:
 
 
 class Context:
-    """Everything a rule needs, computed once per tool call."""
-
     def __init__(self, policy: LoadedPolicy, cwd: str):
         self.policy = policy
         self.project = policy.project
@@ -87,11 +77,6 @@ class Context:
         return path.replace(self.home, "~", 1) if path.startswith(self.home) else path
 
 
-# --------------------------------------------------------------------------
-# Path checks shared by file tools and Bash
-# --------------------------------------------------------------------------
-
-
 def check_read(ctx: Context, verdict: Verdict, raw_path: str, via: str = "") -> None:
     path = resolve(raw_path, ctx.cwd)
     hit = ctx.deny_read.match(path, ctx.project)
@@ -118,10 +103,6 @@ def check_write(ctx: Context, verdict: Verdict, raw_path: str, via: str = "") ->
         decision = ctx.policy.get("paths.write_outside_project", ASK)
         ctx.add(verdict, decision, "write-outside-project", f"{via}{ctx.rel(path)} is outside the project directory.")
 
-
-# --------------------------------------------------------------------------
-# Bash rules
-# --------------------------------------------------------------------------
 
 _CRITICAL_DIRS = {
     "/",
@@ -173,7 +154,6 @@ _SAFE_PATH_COMMANDS = {
     "false",
     ":",
 }
-# git subcommands whose arguments are file paths that get read or staged.
 _GIT_PATH_SUBCOMMANDS = {"add", "show", "cat-file", "blame", "diff", "grep", "stash"}
 _WRITE_DEST_COMMANDS = {"cp", "mv", "install", "ln", "rsync", "tee"}
 _SQL_DESTRUCTIVE = re.compile(r"(?i)\b(drop\s+(?:database|schema|table)|truncate\s+(?:table\s+)?\w|delete\s+from\s+\w+\s*;?\s*$)")
@@ -210,7 +190,6 @@ def _is_critical(ctx: Context, target: str) -> bool:
     if t in ("~", ""):
         return True
     if t in ("*", ".*"):
-        # A bare glob is only dangerous where the directory itself is.
         return _is_critical(ctx, ctx.cwd)
     if t in _CRITICAL_DIRS or t.rstrip("/") in _CRITICAL_DIRS:
         return True
@@ -218,7 +197,7 @@ def _is_critical(ctx: Context, target: str) -> bool:
     if absolute in (ctx.home, os.path.dirname(ctx.home)):
         return True
     if absolute == os.path.normpath(ctx.project) or is_inside(ctx.project, absolute) and absolute != ctx.project:
-        return True  # the project itself or one of its parents
+        return True
     if absolute in _CRITICAL_DIRS:
         return True
     return False
@@ -281,7 +260,6 @@ def rule_git(ctx: Context, v: Verdict, cmd: SimpleCommand) -> None:
     if cmd.name != "git":
         return
     args = list(cmd.args)
-    # skip global options: git -C dir -c k=v sub ...
     while args and args[0].startswith("-"):
         opt = args.pop(0)
         if opt in ("-C", "-c", "--git-dir", "--work-tree", "--namespace") and args:
@@ -482,8 +460,6 @@ def rule_paths_in_command(ctx: Context, v: Verdict, cmd: SimpleCommand) -> None:
                 check_write(ctx, v, expand_user_path(c, ctx.home), via)
             candidates = []
         if cmd.name == "git":
-            # Only subcommands that read or stage files take paths; this keeps
-            # commit messages such as "-m 'ignore .env'" from matching.
             candidates = candidates[1:] if cmd.args[:1] and cmd.args[0] in _GIT_PATH_SUBCOMMANDS else []
         for c in candidates:
             if c.startswith(("http://", "https://")) or "://" in c:
@@ -540,7 +516,6 @@ def evaluate_bash(ctx: Context, command: str) -> Verdict:
         ctx.add(v, DENY, "fork-bomb", "fork bomb.")
     start_cwd = ctx.cwd
     for cmd in analysis.commands:
-        # Follow `cd` through a chain so relative paths resolve correctly.
         if cmd.name in ("cd", "pushd") and cmd.depth == 0:
             target = _positional(cmd.args)[:1]
             if not target:
@@ -555,7 +530,6 @@ def evaluate_bash(ctx: Context, command: str) -> Verdict:
         rule_pipe_to_shell(ctx, v, cmd, analysis)
     ctx.cwd = start_cwd
 
-    # Literal secrets in the command line end up in shell history and logs.
     mode = ctx.policy.get("secrets.scan_commands", ASK)
     if mode != ALLOW:
         found = secretlib.scan_text(command, allow_patterns=ctx.policy.get("secrets.allow_patterns", []), min_confidence=secretlib.HIGH)
@@ -568,7 +542,6 @@ def evaluate_bash(ctx: Context, command: str) -> Verdict:
                 f"the command contains a literal {kinds}; load it from the environment or a secrets manager instead.",
             )
 
-    # User-defined regex rules.
     for rule in ctx.policy.get("bash.rules", []):
         try:
             rx = re.compile(rule["pattern"])
@@ -578,11 +551,6 @@ def evaluate_bash(ctx: Context, command: str) -> Verdict:
         if any(rx.search(t) for t in targets):
             ctx.add(v, rule.get("decision", ASK), rule.get("id", "custom"), rule.get("reason", f"matches custom rule {rule.get('id')}."))
     return v
-
-
-# --------------------------------------------------------------------------
-# Other tools
-# --------------------------------------------------------------------------
 
 
 def _domain_in(host: str, domains: Iterable[str]) -> Optional[str]:

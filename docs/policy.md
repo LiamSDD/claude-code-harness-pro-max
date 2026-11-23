@@ -1,6 +1,6 @@
 # Policy reference
 
-The effective policy is the built-in [defaults](../src/agentharness/defaults/policy.json) merged with each layer that exists:
+The effective policy is the built-in [defaults](../src/harnesspro/defaults/policy.json) merged with each layer that exists:
 
 | Layer | Path | Commit it? |
 | --- | --- | --- |
@@ -125,6 +125,39 @@ Gitignore-style patterns, last match wins:
 | `test_commands` | `[]` | extra regexes for commands that count as verification |
 
 When Claude stops after editing files and its last message claims success ("all tests pass", "fixed the bug", "ready to merge" ...), the harness checks that a test, build, lint or type-check command succeeded after the last edit. Recognised commands include pytest, unittest, npm/pnpm/yarn/bun test and build, jest, vitest, tsc, go test, cargo test, make test, gradle, mvn, rspec, phpunit, dotnet test, ruff and mypy, plus the stop gate command. A failed run does not count.
+
+### `cost`
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `session_budget_usd` | `0` (off) | estimated spend at which tool calls need confirmation |
+| `warn_at` | `0.8` | fraction of the budget at which Claude and the user are warned once |
+| `on_budget` | `ask` | decision once the budget is reached |
+| `read_dedupe` | `true` | refuse a full re-read of an unchanged file in the same agent context |
+| `max_read_bytes` | `200000` | refuse full reads and `cat` of larger files; range reads are allowed |
+| `output_guard` | `deny` | decision for large reads and flooding commands (`allow` turns them off) |
+| `generated_reads` | `deny` | decision for reads matching `generated_paths` |
+| `generated_paths` | lockfiles, `node_modules`, `*.min.*`, `*.map`, build caches | gitignore-style patterns |
+| `prices` | built-in table | per-model USD per million tokens: `input`, `output`, optional `cache_read`, `cache_write_5m`, `cache_write_1h` |
+
+Spend is computed from the session transcript Claude Code writes, read incrementally by the hooks.
+
+| Rule | Fires on |
+| --- | --- |
+| `token-duplicate-read` | full `Read` of a file already read by this agent and unchanged since; reset on `/clear` and compaction |
+| `token-generated-read` | `Read` of a generated or vendored file |
+| `token-large-read` | full `Read` of a file over `max_read_bytes` |
+| `token-output-flood` | `cat`/`less` of large files, `find /` or `find ~` without `-maxdepth`, `tail -f`, `watch`, `docker`/`kubectl logs` without `--tail`/`--since`, `journalctl` without `-n`/`--since`, `git log` without a limit, `ls -R`/`tree` of the project |
+| `budget-exceeded` | any tool call once the session budget is reached |
+
+### `subagents`
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `max_per_session` | `0` (off) | subagents one session may start |
+| `max_concurrent` | `0` (off) | subagents running at the same time |
+| `on_limit` | `deny` | decision when a limit is hit (`subagent-limit`, `subagent-concurrency`) |
+| `models` | `{}` | `subagent_type` → model (`haiku`, `sonnet`, `opus` or an id); `*` is the fallback. Applied only when the Agent call names no model |
 
 ### `post_edit`
 

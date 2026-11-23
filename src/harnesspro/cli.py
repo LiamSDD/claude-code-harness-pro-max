@@ -1,5 +1,3 @@
-"""Command line interface: ``harness <command>``."""
-
 from __future__ import annotations
 
 import argparse
@@ -10,11 +8,11 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from . import __version__, doctor, gitinfo, installer, vet
+from . import __version__, cost, doctor, gitinfo, installer, tuning, vet
 from . import secrets as secretlib
 from . import skills as skilllib
 from .config import harness_dir, load_policy, project_dir
-from .hooks import HANDLERS, dispatch
+from .hooks import dispatch
 from .policy import ALLOW, ASK, DENY, evaluate
 from .progress import Progress, ProgressError
 from .statusline import main_from_stdin
@@ -30,11 +28,6 @@ def _tty() -> bool:
 
 def _project(args: argparse.Namespace) -> str:
     return os.path.abspath(args.project) if getattr(args, "project", None) else project_dir()
-
-
-# --------------------------------------------------------------------------
-# commands
-# --------------------------------------------------------------------------
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
@@ -219,7 +212,9 @@ def cmd_init(args: argparse.Namespace) -> int:
         force=args.force,
         dry_run=args.dry_run,
     )
-    print(f"agent-harness {__version__}: {'dry run for' if args.dry_run else 'installed into'} {project} (profile: {args.profile})")
+    print(
+        f"Claude Code Harness Pro Max {__version__}: {'dry run for' if args.dry_run else 'installed into'} {project} (profile: {args.profile})"
+    )
     print(report.render(project))
     if not args.dry_run:
         print("\nNext: run `harness doctor`, then start Claude Code in this folder.")
@@ -289,14 +284,79 @@ def cmd_skills(args: argparse.Namespace) -> int:
     return 1 if errors or (args.strict and warnings) else 0
 
 
-def cmd_statusline(_args: argparse.Namespace) -> int:
-    print(main_from_stdin(sys.stdin.read()))
+def cmd_cost(args: argparse.Namespace) -> int:
+    try:
+        since = cost.parse_since(args.since)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.files:
+        files = args.files
+    elif args.all:
+        files = cost.transcripts_for(None, since)
+    else:
+        files = cost.transcripts_for(_project(args), since)
+    if not files:
+        print("No Claude Code transcripts found for this project. Use --all for every project, or pass transcript files.", file=sys.stderr)
+        return 1
+    prices = load_policy(_project(args)).get("cost.prices") or None
+    report = cost.analyze(files, prices)
+    print(cost.to_json(report) if args.json else cost.render(report, top_sessions=args.top))
     return 0
 
 
-# --------------------------------------------------------------------------
-# parser
-# --------------------------------------------------------------------------
+def cmd_optimize(args: argparse.Namespace) -> int:
+    project = _project(args)
+    changes = tuning.optimize(project, args.profile, args.budget, apply=args.apply)
+    if not changes:
+        print(f"Already optimized for the {args.profile} profile.")
+        return 0
+    verb = "Applied" if args.apply else "Would apply"
+    print(f"{verb} ({args.profile} profile, {project}):")
+    for c in changes:
+        print(f"  {c}")
+    if not args.apply:
+        print("\nRun again with --apply to write these changes. Measure before and after with `harness cost --since 7d`.")
+    return 0
+
+
+def cmd_upstream(args: argparse.Namespace) -> int:
+    try:
+        if args.file:
+            with open(args.file, encoding="utf-8") as fh:
+                text = fh.read()
+        else:
+            text = tuning.fetch_doc()
+    except OSError as exc:
+        print(f"error: could not read the Claude Code hooks reference: {exc}", file=sys.stderr)
+        return 2
+    events = tuning.documented_events(text)
+    if len(events) < 8:
+        print("error: the hooks reference format changed; no event list found", file=sys.stderr)
+        return 2
+    new, skipped, missing = tuning.upstream_report(text)
+    print(f"{len(events)} hook events documented by Claude Code; harness handles {len(tuning.HANDLED)}.")
+    print("New events (observed and logged once registered): " + (", ".join(new) or "none"))
+    print("Events with their own semantics, deliberately not registered: " + (", ".join(skipped) or "none"))
+    if missing:
+        print("Handled here but not in the docs (renamed or removed?): " + ", ".join(missing))
+    if new and args.apply:
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        hooks_file = os.path.join(root, "hooks", "hooks.json")
+        prefix = 'python3 "${CLAUDE_PLUGIN_ROOT}/bin/harness"'
+        if not os.path.isfile(hooks_file):
+            hooks_file = os.path.join(_project(args), ".claude", "settings.json")
+            prefix = installer.default_hook_command()
+        added = tuning.register_events(hooks_file, new, prefix)
+        print(f"Registered {len(added)} event(s) in {hooks_file}: {', '.join(added) or 'none'}")
+    elif new:
+        print("Run with --apply to register them.")
+    return 0
+
+
+def cmd_statusline(_args: argparse.Namespace) -> int:
+    print(main_from_stdin(sys.stdin.read()))
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -304,13 +364,13 @@ def build_parser() -> argparse.ArgumentParser:
         prog="harness",
         description="Guardrails, memory and verification for Claude Code agents.",
     )
-    p.add_argument("--version", action="version", version=f"agent-harness {__version__}")
+    p.add_argument("--version", action="version", version=f"Claude Code Harness Pro Max {__version__}")
     p.add_argument("-C", "--project", help="project directory (default: $CLAUDE_PROJECT_DIR or cwd)")
     sub = p.add_subparsers(dest="command", metavar="<command>")
     sub.required = True
 
     s = sub.add_parser("hook", help="run a Claude Code hook (reads event JSON on stdin)")
-    s.add_argument("event", choices=sorted(HANDLERS), metavar="event")
+    s.add_argument("event", metavar="event", help="hook event name, e.g. PreToolUse (unknown events are logged)")
     s.set_defaults(func=cmd_hook)
 
     s = sub.add_parser("init", help="install the harness into a project")
@@ -387,6 +447,25 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("action", choices=["show", "sources", "validate"])
     s.set_defaults(func=cmd_policy)
 
+    s = sub.add_parser("cost", help="token and dollar report from Claude Code transcripts, with savings advice")
+    s.add_argument("files", nargs="*", help="transcript .jsonl files (default: this project's)")
+    s.add_argument("--since", help="only transcripts modified within 24h, 7d, 4w ...")
+    s.add_argument("--all", action="store_true", help="every project on this machine")
+    s.add_argument("--top", type=int, default=5, help="sessions to list")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_cost)
+
+    s = sub.add_parser("optimize", help="apply token-saving Claude Code settings and harness limits")
+    s.add_argument("--profile", choices=sorted(tuning.PROFILES), default="balanced")
+    s.add_argument("--budget", type=float, help="session budget in USD (ask before tools once reached)")
+    s.add_argument("--apply", action="store_true", help="write the changes (default: show them)")
+    s.set_defaults(func=cmd_optimize)
+
+    s = sub.add_parser("upstream", help="compare with Claude Code's current hook events and register new ones")
+    s.add_argument("--file", help="read the hooks reference from a file instead of the web")
+    s.add_argument("--apply", action="store_true", help="register new events")
+    s.set_defaults(func=cmd_upstream)
+
     s = sub.add_parser("statusline", help="render the Claude Code status line (stdin JSON)")
     s.set_defaults(func=cmd_statusline)
     return p
@@ -399,11 +478,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         os.environ["CLAUDE_PROJECT_DIR"] = os.path.abspath(args.project)
     try:
         return args.func(args)
-    except BrokenPipeError:  # e.g. `harness audit | head`
+    except BrokenPipeError:
         return 0
     except KeyboardInterrupt:
         return 130
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     sys.exit(main())

@@ -1,51 +1,47 @@
 ---
-name: agent-harness
-description: Use when starting software work in a project, when planning, implementing, debugging, reviewing or finishing code, when the user says "continue" on multi-session work, or before installing a third-party skill or plugin. Engineering workflows (TDD, systematic debugging, verification, plans, subagent execution, code review) plus guardrail and progress tools.
+name: harness-pro-max
+description: Use when starting software work, when planning, implementing, debugging, reviewing or finishing code, when coordinating several subagents, when cost or tokens matter, or when the user says "continue" on multi-session work. Engineering workflows (TDD, debugging, verification, plans, agent teams, token optimization, review) plus cost, progress and safety tools.
 ---
 
-# agent-harness
+# Claude Code Harness Pro Max
 
-This folder is both a Claude Code plugin (guardrail hooks, subagents, skills) and a standalone skill. Installed as a skill (cloned into `~/.claude/skills/agent-harness`), it gives you the workflows below; the hooks only run when it is installed as a plugin or with `harness init`.
+Workflows and tools for Claude Code. As a plugin it also installs guardrail and token-guard hooks; as a skill (this folder in `~/.claude/skills/harness-pro-max`) it provides the workflows and the `bin/harness` tools.
 
 ## Pick a workflow
 
-Read the one that fits before you start. Each is short.
-
 | Situation | Read |
 | --- | --- |
-| Something new to build with open choices | [brainstorming](src/agentharness/templates/skills/brainstorming/SKILL.md), then [writing-plans](src/agentharness/templates/skills/writing-plans/SKILL.md) |
-| Executing a plan yourself | [executing-plans](src/agentharness/templates/skills/executing-plans/SKILL.md) |
-| Executing a plan with a subagent per task | [subagent-driven-development](src/agentharness/templates/skills/subagent-driven-development/SKILL.md) |
-| Multi-session work, "continue", "next feature" | [feature-loop](src/agentharness/templates/skills/feature-loop/SKILL.md) |
-| Writing production code | [test-driven-development](src/agentharness/templates/skills/test-driven-development/SKILL.md) |
-| A bug or failing test | [systematic-debugging](src/agentharness/templates/skills/systematic-debugging/SKILL.md) |
-| About to say it works or is done | [verification-before-completion](src/agentharness/templates/skills/verification-before-completion/SKILL.md) |
-| Want a review | [requesting-code-review](src/agentharness/templates/skills/requesting-code-review/SKILL.md) |
-| Got review feedback | [receiving-code-review](src/agentharness/templates/skills/receiving-code-review/SKILL.md) |
-| Several independent problems | [dispatching-parallel-agents](src/agentharness/templates/skills/dispatching-parallel-agents/SKILL.md) |
-| Isolate work from the current branch | [using-git-worktrees](src/agentharness/templates/skills/using-git-worktrees/SKILL.md) |
-| Tests green, ready to integrate | [finishing-a-development-branch](src/agentharness/templates/skills/finishing-a-development-branch/SKILL.md) |
-| Ending a session | [session-handoff](src/agentharness/templates/skills/session-handoff/SKILL.md) |
-| Before a release | [release-check](src/agentharness/templates/skills/release-check/SKILL.md) |
-| Writing a skill | [writing-skills](src/agentharness/templates/skills/writing-skills/SKILL.md) |
+| New work with open choices | [brainstorming](src/harnesspro/templates/skills/brainstorming/SKILL.md), then [writing-plans](src/harnesspro/templates/skills/writing-plans/SKILL.md) |
+| Carry out a plan yourself | [executing-plans](src/harnesspro/templates/skills/executing-plans/SKILL.md) |
+| Carry out a plan with an agent per task | [subagent-driven-development](src/harnesspro/templates/skills/subagent-driven-development/SKILL.md) |
+| Many files to read, many agents, independent changes | [orchestrating-agent-teams](src/harnesspro/templates/skills/orchestrating-agent-teams/SKILL.md) |
+| Large codebase, long session, budget | [optimizing-token-usage](src/harnesspro/templates/skills/optimizing-token-usage/SKILL.md) |
+| Multi-session work, "continue" | [feature-loop](src/harnesspro/templates/skills/feature-loop/SKILL.md) |
+| Writing production code | [test-driven-development](src/harnesspro/templates/skills/test-driven-development/SKILL.md) |
+| A bug or failing test | [systematic-debugging](src/harnesspro/templates/skills/systematic-debugging/SKILL.md) |
+| About to say it works | [verification-before-completion](src/harnesspro/templates/skills/verification-before-completion/SKILL.md) |
+| Review | [requesting-code-review](src/harnesspro/templates/skills/requesting-code-review/SKILL.md), [receiving-code-review](src/harnesspro/templates/skills/receiving-code-review/SKILL.md) |
+| Independent problems | [dispatching-parallel-agents](src/harnesspro/templates/skills/dispatching-parallel-agents/SKILL.md) |
+| Isolation and integration | [using-git-worktrees](src/harnesspro/templates/skills/using-git-worktrees/SKILL.md), [finishing-a-development-branch](src/harnesspro/templates/skills/finishing-a-development-branch/SKILL.md) |
+| Ending a session | [session-handoff](src/harnesspro/templates/skills/session-handoff/SKILL.md) |
+| Releasing | [release-check](src/harnesspro/templates/skills/release-check/SKILL.md) |
+| Writing a skill | [writing-skills](src/harnesspro/templates/skills/writing-skills/SKILL.md) |
 
-The full map, with how the harness checks your work, is in [using-agent-harness](src/agentharness/templates/skills/using-agent-harness/SKILL.md).
+Full map: [using-harness-pro-max](src/harnesspro/templates/skills/using-harness-pro-max/SKILL.md).
 
-## Tools in this folder
+## Subagent briefs
 
-`bin/harness` runs with any Python 3.9+ and needs no installation:
+[src/harnesspro/templates/agents](src/harnesspro/templates/agents): `explorer` (haiku, read-only search), `implementer`, `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. As a plugin they are registered automatically; as a skill, pass the file's instructions to a subagent.
+
+## Tools
+
+`bin/harness` runs with Python 3.9+, no installation. Run from the project directory:
 
 ```bash
-python3 bin/harness vet <path>                   # security-scan a skill, plugin or repo before using it
-python3 bin/harness skills check <path>          # lint a skill's frontmatter, size and links
-python3 bin/harness check bash "<command>"       # would the guardrail policy allow this?
-python3 bin/harness progress show                # feature list for multi-session work
-python3 bin/harness progress import <plan.md>    # turn a plan's tasks into tracked features
-python3 bin/harness progress note "<text>"       # append to the handoff log
+python3 <this-folder>/bin/harness cost --since 7d          # spend by model and agent, with fixes
+python3 <this-folder>/bin/harness optimize                 # preview token-saving settings (--apply to write)
+python3 <this-folder>/bin/harness progress show            # feature list
+python3 <this-folder>/bin/harness progress import plan.md  # plan tasks into features
+python3 <this-folder>/bin/harness check bash "<command>"   # would the policy allow it
+python3 <this-folder>/bin/harness vet <path>               # review a third-party skill or plugin
 ```
-
-Run them from the project directory, giving the path to this folder's `bin/harness`.
-
-## Subagent roles
-
-Briefs for these roles live in [src/agentharness/templates/agents](src/agentharness/templates/agents): `implementer`, `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. When installed as a plugin they are registered automatically; as a skill, read the file and pass its instructions to a general-purpose subagent.

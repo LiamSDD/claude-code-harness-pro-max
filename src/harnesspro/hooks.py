@@ -1,17 +1,3 @@
-"""Claude Code hook handlers.
-
-Every hook runs ``harness hook <Event>``. Claude Code writes the event JSON to
-stdin; the handler answers on stdout using the documented output contract:
-
-* exit 0 + JSON object  -> structured decision / context
-* exit 0 + plain text   -> context (SessionStart, UserPromptSubmit) or
-                           compaction instructions (PreCompact)
-* exit 1                -> non-blocking error, Claude Code carries on
-
-Policy decisions are always returned as JSON (never via exit 2) so the
-reason reaches Claude intact.
-"""
-
 from __future__ import annotations
 
 import json
@@ -28,15 +14,16 @@ from typing import Any, Callable, Dict, List, Optional
 from . import __version__, gitinfo
 from . import secrets as secretlib
 from .config import LoadedPolicy, harness_dir, load_policy, project_dir
+from .cost import Meter
+from .economy import AGENT_TOOLS, Economy, forget_reads, record_read
 from .pathmatch import PathMatcher, resolve
-from .policy import ALLOW, DENY, evaluate
+from .policy import ALLOW, ASK, DENY, evaluate
 from .progress import Progress
 from .store import AuditLog, SessionState
 
 EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-PREFIX = "agent-harness"
+PREFIX = "harness-pro-max"
 
-# Commands that count as verification evidence.
 TEST_COMMAND = re.compile(
     r"(?x)(^|[\s;&|(])("
     r"(python[0-9.]*\s+-m\s+)?(pytest|unittest|tox|nox)\b|"
@@ -49,7 +36,6 @@ TEST_COMMAND = re.compile(
     r")"
 )
 
-# Phrases that claim the work is done or working.
 SUCCESS_CLAIM = re.compile(
     r"(?i)\b(all (the )?tests (now )?pass(ing|es)?|tests? (are |now )*(passing|green)|"
     r"(test )?suite (is )?(passing|green)|everything (works|passes|is working)|"
@@ -76,7 +62,6 @@ def _tail(text: str, limit: int) -> str:
 
 
 def summarize_input(tool_name: str, tool_input: Any) -> Dict[str, Any]:
-    """What the audit log keeps about a tool call: never file contents."""
     if not isinstance(tool_input, dict):
         return {}
     keep = {}
@@ -91,8 +76,6 @@ def summarize_input(tool_name: str, tool_input: Any) -> Dict[str, Any]:
 
 
 class Harness:
-    """Shared context for one hook invocation."""
-
     def __init__(self, payload: Dict[str, Any]):
         self.payload = payload
         self.project = project_dir(payload)
@@ -106,24 +89,34 @@ class Harness:
     def log(self, event: str, **fields: Any) -> None:
         try:
             self.audit.write({"event": event, "session": (self.session_id or "")[:12], **fields})
-        except OSError as exc:  # never fail a hook because the log is unwritable
+        except OSError as exc:
             sys.stderr.write(f"{PREFIX}: audit log unavailable: {exc}\n")
 
 
-# --------------------------------------------------------------------------
-# PreToolUse
-# --------------------------------------------------------------------------
+ECONOMY_RULES = ("token-", "subagent-", "budget-")
 
 
 def pre_tool_use(h: Harness) -> HookResult:
     tool = h.payload.get("tool_name", "")
     tool_input = h.payload.get("tool_input") or {}
-    verdict = evaluate(tool, tool_input, h.policy, h.cwd)
     mode = h.policy.mode
+    verdict = evaluate(tool, tool_input, h.policy, h.cwd)
+    updated = None
+    if mode != "off":
+        st = h.state.load()
+        verdict, updated = Economy(h.policy, h.cwd, h.payload, st).evaluate(tool, tool_input, verdict)
 
-    if verdict.decision != ALLOW:
+    if verdict.decision != ALLOW or (tool in AGENT_TOOLS and mode == "enforce"):
         with h.state.update() as st:
-            st["denied" if verdict.decision == DENY else "asked"] += 1
+            if verdict.decision == DENY:
+                st["denied"] += 1
+                if all(r.startswith(ECONOMY_RULES) for r in verdict.rules):
+                    st["saved_calls"] = st.get("saved_calls", 0) + 1
+            elif verdict.decision == ASK:
+                st["asked"] += 1
+            if tool in AGENT_TOOLS and verdict.decision != DENY:
+                st["subagents_spawned"] = st.get("subagents_spawned", 0) + 1
+    if verdict.decision != ALLOW:
         h.log(
             "PreToolUse",
             tool=tool,
@@ -133,27 +126,31 @@ def pre_tool_use(h: Harness) -> HookResult:
             input=summarize_input(tool, tool_input),
         )
 
-    if verdict.decision == ALLOW or mode == "off":
+    if mode == "off":
         return HookResult()
+    if verdict.decision == ALLOW:
+        if updated is None:
+            return HookResult()
+        h.log("PreToolUse", tool=tool, decision="routed", model=updated.get("model"), agent_type=tool_input.get("subagent_type"))
+        return _json(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow",
+                    "permissionDecisionReason": f"{PREFIX}: subagent routed to {updated.get('model')} by subagents.models",
+                    "updatedInput": updated,
+                }
+            }
+        )
     if mode == "warn":
         return _json({"systemMessage": f"{PREFIX} (warn mode) would {verdict.decision}: {verdict.reason}"})
     reason = f"{PREFIX}: {verdict.reason}"
-    if verdict.decision == DENY:
+    if verdict.decision == DENY and not all(r.startswith(ECONOMY_RULES) for r in verdict.rules):
         reason += " Do not retry with a workaround; explain to the user what you need and why."
-    return _json(
-        {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": verdict.decision,
-                "permissionDecisionReason": reason,
-            }
-        }
-    )
-
-
-# --------------------------------------------------------------------------
-# PostToolUse / PostToolUseFailure
-# --------------------------------------------------------------------------
+    out: Dict[str, Any] = {"hookEventName": "PreToolUse", "permissionDecision": verdict.decision, "permissionDecisionReason": reason}
+    if updated is not None and verdict.decision == ASK:
+        out["updatedInput"] = updated
+    return _json({"hookSpecificOutput": out})
 
 
 def _edited_path(tool_input: Dict[str, Any]) -> Optional[str]:
@@ -162,7 +159,6 @@ def _edited_path(tool_input: Dict[str, Any]) -> Optional[str]:
 
 
 def run_formatters(h: Harness, path: str) -> List[str]:
-    """Run matching ``post_edit.formatters``. Returns problems for Claude."""
     problems: List[str] = []
     formatters = h.policy.get("post_edit.formatters", []) or []
     timeout = int(h.policy.get("post_edit.timeout", 30))
@@ -174,7 +170,7 @@ def run_formatters(h: Harness, path: str) -> List[str]:
         command = fmt["command"].replace("{file}", shlex.quote(abs_path))
         exe = shlex.split(command)[0] if command.strip() else ""
         if not exe or (shutil.which(exe) is None and not os.path.exists(exe)):
-            continue  # formatter not installed on this machine: skip quietly
+            continue
         try:
             proc = subprocess.run(command, shell=True, cwd=h.project, capture_output=True, text=True, timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -190,8 +186,15 @@ def post_tool_use(h: Harness) -> HookResult:
     tool_input = h.payload.get("tool_input") or {}
     path = _edited_path(tool_input) if tool in EDIT_TOOLS else None
     command = str(tool_input.get("command", "")) if tool == "Bash" else ""
+    response = h.payload.get("tool_response")
+    output_chars = len(json.dumps(response, ensure_ascii=False)) if response is not None else 0
+    budget_note = None
     with h.state.update() as st:
         st["tool_calls"] += 1
+        st["output_chars"] = st.get("output_chars", 0) + output_chars
+        if tool == "Read" and isinstance(tool_input.get("file_path"), str) and not (tool_input.get("offset") or tool_input.get("limit")):
+            record_read(st, h.payload, resolve(tool_input["file_path"], h.cwd))
+        budget_note = meter_and_warn(h, st)
         if path:
             rel = os.path.relpath(resolve(path, h.cwd), h.project) if path else None
             if rel and rel not in st["edited_files"]:
@@ -202,24 +205,39 @@ def post_tool_use(h: Harness) -> HookResult:
         elif command and is_verification(h, command):
             st["verified_since_edit"] = True
             st["last_verification"] = command[:200]
-    response = h.payload.get("tool_response")
-    extra: Dict[str, Any] = {}
+    extra: Dict[str, Any] = {"output_chars": output_chars}
     if isinstance(response, dict) and tool == "Bash":
         extra["interrupted"] = response.get("interrupted")
     h.log("PostToolUse", tool=tool, input=summarize_input(tool, tool_input), duration_ms=h.payload.get("duration_ms"), **extra)
 
+    notes = []
     if path:
         problems = run_formatters(h, path)
         if problems:
-            return _json(
-                {
-                    "hookSpecificOutput": {
-                        "hookEventName": "PostToolUse",
-                        "additionalContext": f"{PREFIX}: post-edit checks failed for {path}:\n" + "\n\n".join(problems),
-                    }
-                }
-            )
+            notes.append(f"{PREFIX}: post-edit checks failed for {path}:\n" + "\n\n".join(problems))
+    if budget_note:
+        notes.append(budget_note)
+    if notes:
+        out: Dict[str, Any] = {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "\n\n".join(notes)}}
+        if budget_note:
+            out["systemMessage"] = budget_note
+        return _json(out)
     return HookResult()
+
+
+def meter_and_warn(h: Harness, st: Dict[str, Any]) -> Optional[str]:
+    cfg = h.policy.data.get("cost", {})
+    spent = Meter(cfg.get("prices") or None).update(st, h.payload.get("transcript_path"))
+    limit = float(cfg.get("session_budget_usd") or 0)
+    if limit <= 0 or st.get("budget_warned"):
+        return None
+    if spent >= limit * float(cfg.get("warn_at", 0.8)):
+        st["budget_warned"] = True
+        return (
+            f"{PREFIX}: this session has spent ${spent:.2f} of its ${limit:.2f} budget. Prefer the cheapest route from here: "
+            "targeted Grep over full reads, short outputs, no new subagents unless essential."
+        )
+    return None
 
 
 def is_verification(h: Harness, command: str) -> bool:
@@ -243,7 +261,7 @@ def post_tool_use_failure(h: Harness) -> HookResult:
     with h.state.update() as st:
         st["failures"] += 1
         if command and is_verification(h, command):
-            st["verified_since_edit"] = False  # a failing run is not evidence of success
+            st["verified_since_edit"] = False
             st["last_verification"] = f"{command[:200]} (failed)"
     error = str(h.payload.get("error", "")).splitlines()[:1]
     h.log(
@@ -254,11 +272,6 @@ def post_tool_use_failure(h: Harness) -> HookResult:
         interrupted=h.payload.get("is_interrupt"),
     )
     return HookResult()
-
-
-# --------------------------------------------------------------------------
-# UserPromptSubmit
-# --------------------------------------------------------------------------
 
 
 def user_prompt_submit(h: Harness) -> HookResult:
@@ -297,11 +310,6 @@ def user_prompt_submit(h: Harness) -> HookResult:
     )
 
 
-# --------------------------------------------------------------------------
-# SessionStart
-# --------------------------------------------------------------------------
-
-
 def session_context(h: Harness) -> str:
     ctx = h.policy.data.get("context", {})
     max_chars = int(ctx.get("max_chars", 6000))
@@ -333,7 +341,7 @@ def session_context(h: Harness) -> str:
         if names:
             lines.append(
                 "Skills: " + ", ".join(names) + ". Before starting a task, check whether one applies "
-                "(using-agent-harness explains which to use when)."
+                "(using-harness-pro-max explains which to use when)."
             )
     if h.policy.errors:
         lines.append("Policy problems (these layers were skipped): " + "; ".join(h.policy.errors))
@@ -342,11 +350,10 @@ def session_context(h: Harness) -> str:
 
 
 def available_skill_names(h: Harness) -> List[str]:
-    """Skill names the plugin or project provides, cheap to compute."""
     roots = []
     plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
     if plugin_root:
-        roots.append(os.path.join(plugin_root, "src", "agentharness", "templates", "skills"))
+        roots.append(os.path.join(plugin_root, "src", "harnesspro", "templates", "skills"))
     roots.append(os.path.join(h.project, ".claude", "skills"))
     names: List[str] = []
     for root in roots:
@@ -362,6 +369,9 @@ def available_skill_names(h: Harness) -> List[str]:
 
 def session_start(h: Harness) -> HookResult:
     SessionState.prune(h.dir)
+    if h.payload.get("source") in ("clear", "compact"):
+        with h.state.update() as st:
+            forget_reads(st)
     h.log("SessionStart", source=h.payload.get("source"), model=h.payload.get("model"), permission_mode=h.payload.get("permission_mode"))
     if not h.policy.get("context.session_start", True):
         return HookResult()
@@ -371,13 +381,7 @@ def session_start(h: Harness) -> HookResult:
     return _json(out)
 
 
-# --------------------------------------------------------------------------
-# Stop: the verification gate
-# --------------------------------------------------------------------------
-
-
 def check_claims(h: Harness, st: Dict[str, Any]) -> Optional[HookResult]:
-    """verification-before-completion: a success claim needs fresh evidence."""
     vc = h.policy.data.get("verify_claims", {})
     if not vc.get("enabled", True) or not st.get("edited_files"):
         return None
@@ -409,6 +413,8 @@ def check_claims(h: Harness, st: Dict[str, Any]) -> Optional[HookResult]:
 def stop(h: Harness) -> HookResult:
     gate = h.policy.data.get("stop_gate", {})
     command = (gate.get("command") or "").strip()
+    with h.state.update() as current:
+        Meter(h.policy.get("cost.prices") or None).update(current, h.payload.get("transcript_path"))
     st = h.state.load()
     if not gate.get("enabled") or not command:
         blocked = check_claims(h, st)
@@ -465,18 +471,58 @@ def stop(h: Harness) -> HookResult:
     )
 
 
-def subagent_stop(h: Harness) -> HookResult:
-    h.log("SubagentStop", agent_type=h.payload.get("agent_type"))
+def subagent_start(h: Harness) -> HookResult:
+    agent = str(h.payload.get("agent_id") or "")
+    with h.state.update() as st:
+        running = [a for a in st.get("subagents_running", []) if a != agent]
+        st["subagents_running"] = (running + [agent])[-100:] if agent else running
+    h.log("SubagentStart", agent_type=h.payload.get("agent_type"), agent=agent[:12])
     return HookResult()
 
 
-# --------------------------------------------------------------------------
-# PreCompact / SessionEnd / Notification
-# --------------------------------------------------------------------------
+def subagent_stop(h: Harness) -> HookResult:
+    agent = str(h.payload.get("agent_id") or "")
+    with h.state.update() as st:
+        st["subagents_running"] = [a for a in st.get("subagents_running", []) if a != agent]
+        st.get("reads", {}).pop(agent, None)
+    h.log("SubagentStop", agent_type=h.payload.get("agent_type"), agent=agent[:12])
+    return HookResult()
+
+
+def post_compact(h: Harness) -> HookResult:
+    with h.state.update() as st:
+        forget_reads(st)
+    h.log("PostCompact", trigger=h.payload.get("trigger"))
+    return HookResult()
+
+
+def config_change(h: Harness) -> HookResult:
+    h.log("ConfigChange", source=h.payload.get("source"), file=h.payload.get("file_path"))
+    settings = os.path.join(h.project, ".claude", "settings.json")
+    try:
+        with open(settings, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return HookResult()
+    if os.environ.get("CLAUDE_PLUGIN_ROOT") or "hook PreToolUse" in text:
+        return HookResult()
+    return _json({"systemMessage": f"{PREFIX}: .claude/settings.json no longer runs the harness PreToolUse hook. Run `harness doctor`."})
+
+
+def observe(h: Harness) -> HookResult:
+    fields = {
+        k: v
+        for k, v in h.payload.items()
+        if k not in ("session_id", "transcript_path", "cwd", "hook_event_name", "prompt_id") and isinstance(v, (str, int, float, bool))
+    }
+    h.log(str(h.payload.get("hook_event_name") or h.payload.get("_dispatched_as") or "event"), **{k: fields[k] for k in list(fields)[:8]})
+    return HookResult()
 
 
 def pre_compact(h: Harness) -> HookResult:
     comp = h.policy.data.get("compaction", {})
+    with h.state.update() as current:
+        forget_reads(current)
     st = h.state.load()
     h.log("PreCompact", trigger=h.payload.get("trigger"))
     if comp.get("checkpoint", True):
@@ -536,7 +582,16 @@ HANDLERS: Dict[str, Callable[[Harness], HookResult]] = {
     "UserPromptSubmit": user_prompt_submit,
     "SessionStart": session_start,
     "Stop": stop,
+    "SubagentStart": subagent_start,
     "SubagentStop": subagent_stop,
+    "PostCompact": post_compact,
+    "ConfigChange": config_change,
+    "PermissionDenied": observe,
+    "StopFailure": observe,
+    "PostModelSwitch": observe,
+    "TaskCreated": observe,
+    "TaskCompleted": observe,
+    "InstructionsLoaded": observe,
     "PreCompact": pre_compact,
     "SessionEnd": session_end,
     "Notification": notification,
@@ -544,9 +599,9 @@ HANDLERS: Dict[str, Callable[[Harness], HookResult]] = {
 
 
 def dispatch(event: str, stdin_text: str) -> HookResult:
-    handler = HANDLERS.get(event)
-    if handler is None:
-        return HookResult(exit_code=1, stderr=f"{PREFIX}: unknown hook event '{event}'. Known: {', '.join(HANDLERS)}\n")
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]{1,63}", event or ""):
+        return HookResult(exit_code=1, stderr=f"{PREFIX}: invalid hook event name '{event}'\n")
+    handler = HANDLERS.get(event, observe)
     try:
         payload = json.loads(stdin_text) if stdin_text.strip() else {}
         if not isinstance(payload, dict):
@@ -560,7 +615,7 @@ def dispatch(event: str, stdin_text: str) -> HookResult:
     try:
         harness = Harness(payload)
         return handler(harness)
-    except Exception as exc:  # noqa: BLE001 - hooks must never crash Claude Code
+    except Exception as exc:
         detail = "".join(traceback.format_exception_only(type(exc), exc)).strip()
         fail_closed = harness is not None and harness.policy.data.get("fail_mode") == "closed"
         if event == "PreToolUse" and fail_closed:

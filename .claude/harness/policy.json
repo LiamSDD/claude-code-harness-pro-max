@@ -1,5 +1,5 @@
 {
-  "$comment": "Policy for developing agent-harness itself. Layers over src/agentharness/defaults/policy.json.",
+  "$comment": "Policy for developing Harness Pro Max itself. Layers over src/harnesspro/defaults/policy.json.",
   "version": 1,
   "mode": "enforce",
   "stop_gate": {

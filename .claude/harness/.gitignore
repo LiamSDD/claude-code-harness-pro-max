@@ -1,4 +1,3 @@
-# agent-harness: machine-local files
 audit.jsonl
 audit.jsonl.*
 state/

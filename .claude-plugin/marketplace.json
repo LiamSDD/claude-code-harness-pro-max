@@ -1,13 +1,13 @@
 {
-  "name": "agent-harness",
+  "name": "harness-pro-max",
   "owner": {
     "name": "priveight02"
   },
   "plugins": [
     {
-      "name": "agent-harness",
+      "name": "harness-pro-max",
       "source": "./",
-      "description": "Guardrails, memory, verification and engineering workflows for Claude Code: a shell-aware policy engine, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check before Claude stops, six subagents and 18 skills (TDD, systematic debugging, plans, subagent-driven development, code review)."
+      "description": "Guardrails, token and cost control, multi-agent orchestration, memory and verification for Claude Code: a shell-aware policy engine, token-waste guards, subagent routing and limits, session budgets, cost analytics, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check, 7 subagents and 20 workflow skills."
     }
   ]
 }

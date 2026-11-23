@@ -1,0 +1,91 @@
+{
+  "injection": [
+    {
+      "pattern": "(?i)\\b(ignore|disregard|forget|override)\\b.{0,30}\\b(all |any )?(previous|prior|above|earlier|system|developer)\\b.{0,20}\\b(instructions?|prompts?|rules?|messages?)",
+      "severity": "high",
+      "label": "instruction override"
+    },
+    {
+      "pattern": "(?i)\\b(do not|don't|never)\\s+(tell|inform|show|mention|reveal|alert|notify|let)\\b.{0,15}\\b(the )?(user|human|operator)\\b(?!\\s+(what|why|how))",
+      "severity": "high",
+      "label": "hide actions from the user"
+    },
+    {
+      "pattern": "(?i)\\bwithout (asking|telling|notifying|confirming with) the (user|human)",
+      "severity": "medium",
+      "label": "act without the user's knowledge"
+    },
+    {
+      "pattern": "(?i)</?(system|system-reminder|assistant|human|im_start|im_end)>",
+      "severity": "medium",
+      "label": "fake conversation or system markup"
+    },
+    {
+      "pattern": "(?i)\\byou are (now|no longer)\\b.{0,40}\\b(unrestricted|jailbroken|dan|developer mode|not bound)",
+      "severity": "high",
+      "label": "role hijack"
+    },
+    {
+      "pattern": "(?i)\\b(exfiltrate|upload|send|post)\\b.{0,40}\\b(\\.env|credentials?|secrets?|api[_ -]?keys?|ssh keys?|tokens?|cookies)\\b.{0,40}\\b(to|https?://)",
+      "severity": "high",
+      "label": "credential exfiltration"
+    },
+    {
+      "pattern": "(?i)\\b(disable|turn off|bypass|skip)\\b.{0,25}\\b(the )?(harness|hooks?|guardrails?|sandbox|permission prompts?|safety checks?)",
+      "severity": "medium",
+      "label": "disable safety controls"
+    },
+    {
+      "pattern": "(?i)--dangerously-skip-permissions|bypassPermissions|\\\"defaultMode\\\"\\s*:\\s*\\\"(bypassPermissions|dontAsk)\\\"",
+      "severity": "medium",
+      "label": "permission bypass"
+    }
+  ],
+  "code": [
+    {
+      "pattern": "\\beval\\s*\\(",
+      "severity": "medium",
+      "label": "eval()"
+    },
+    {
+      "pattern": "\\bnew\\s+Function\\s*\\(",
+      "severity": "medium",
+      "label": "new Function()"
+    },
+    {
+      "pattern": "\\bexec\\s*\\(\\s*(compile|base64|bytes|codecs|zlib|marshal)",
+      "severity": "high",
+      "label": "exec of decoded data"
+    },
+    {
+      "pattern": "\\b(child_process|require\\(['\\\"]child_process['\\\"]\\))[\\s\\S]{0,80}\\b(exec|execSync)\\s*\\(",
+      "severity": "medium",
+      "label": "shell execution (child_process.exec)"
+    },
+    {
+      "pattern": "\\bos\\.system\\s*\\(|\\bsubprocess\\.[a-z_]+\\([^)]*shell\\s*=\\s*True",
+      "severity": "medium",
+      "label": "shell execution (Python)"
+    },
+    {
+      "pattern": "\\b(atob|b64decode|base64\\.b64decode|Buffer\\.from\\([^)]*['\\\"]base64['\\\"])",
+      "severity": "info",
+      "label": "base64 decoding"
+    },
+    {
+      "pattern": "\\b(fetch|axios\\.[a-z]+|https?\\.(get|request)|urllib\\.request\\.urlopen|requests\\.(get|post|put))\\s*\\(\\s*['\\\"`]https?://(?!localhost|127\\.0\\.0\\.1)",
+      "severity": "medium",
+      "label": "network request to a remote host"
+    },
+    {
+      "pattern": "(?i)\\b(Invoke-WebRequest|Invoke-Expression|iex\\s*\\(|DownloadString)\\b",
+      "severity": "high",
+      "label": "PowerShell download/execute"
+    },
+    {
+      "pattern": "/dev/tcp/|\\bnc\\s+-e\\b|\\bbash\\s+-i\\s*>&",
+      "severity": "high",
+      "label": "reverse shell"
+    }
+  ]
+}

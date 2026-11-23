@@ -1,14 +1,3 @@
-"""Gitignore-style path patterns.
-
-* ``*.pem``           no slash: matches the file name anywhere
-* ``**/.ssh/**``      matches anywhere in the absolute or project-relative path
-* ``.github/workflows/**`` relative to the project root
-* ``~/.aws/**``, ``/etc/**`` absolute (``~`` is expanded)
-* ``!pattern``        re-includes a path an earlier pattern matched
-
-Patterns are evaluated in order and the last match wins, like ``.gitignore``.
-"""
-
 from __future__ import annotations
 
 import os
@@ -58,7 +47,7 @@ def _normalize(path: str) -> str:
 class PathMatcher:
     def __init__(self, patterns: Iterable[str], home: Optional[str] = None):
         self.home = home or os.path.expanduser("~")
-        self.rules: List[Tuple[bool, str, str]] = []  # (negated, kind, pattern)
+        self.rules: List[Tuple[bool, str, str]] = []
         for raw in patterns:
             p = raw.strip()
             if not p or p.startswith("#"):
@@ -94,7 +83,6 @@ class PathMatcher:
         return os.path.basename(abs_path.rstrip("/")), abs_forms, rel
 
     def match(self, abs_path: str, project: str) -> Optional[str]:
-        """Return the pattern that decides ``abs_path`` (None if not matched)."""
         name, abs_forms, rel = self._candidates(abs_path, project)
         decided: Optional[str] = None
         for neg, kind, p in self.rules:
@@ -114,7 +102,6 @@ class PathMatcher:
 
 
 def resolve(path: str, cwd: str) -> str:
-    """Absolute, normalized path for a tool argument (``~`` expanded)."""
     path = os.path.expanduser(path)
     if not os.path.isabs(path):
         path = os.path.join(cwd, path)

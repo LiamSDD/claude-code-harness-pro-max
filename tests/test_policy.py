@@ -3,8 +3,8 @@ import unittest
 
 from helpers import FAKE_ANTHROPIC, FAKE_GITHUB, FAKE_STRIPE, ProjectTestCase
 
-from agentharness.config import load_policy
-from agentharness.policy import evaluate
+from harnesspro.config import load_policy
+from harnesspro.policy import evaluate
 
 
 class PolicyCase(ProjectTestCase):
@@ -46,7 +46,7 @@ class DestructiveCommandTests(PolicyCase):
 
     def test_find_delete(self):
         self.assertDecision(self.bash("find / -name '*.log' -delete"), "deny")
-        self.assertDecision(self.bash("find . -name '*.pyc' -delete"), "deny")  # whole project
+        self.assertDecision(self.bash("find . -name '*.pyc' -delete"), "deny")
         self.assertDecision(self.bash("find build -name '*.o' -delete"), "allow")
 
     def test_disk_and_system(self):
@@ -151,7 +151,7 @@ class WriteTests(PolicyCase):
         self.assertDecision(self.decide("Write", file_path=self.path("src", "main.py"), content="print(1)\n"), "allow")
 
     def test_outside_project(self):
-        outside = os.path.expanduser("~/agent-harness-test-notes.txt")
+        outside = os.path.expanduser("~/harness-pro-max-test-notes.txt")
         self.assertDecision(self.decide("Write", file_path=outside, content="x"), "ask", "write-outside-project")
         self.assertDecision(self.decide("Write", file_path="/tmp/scratch.txt", content="x"), "allow")
 

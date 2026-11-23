@@ -1,12 +1,13 @@
+import json
 import os
 import sys
 import unittest
 
 from helpers import FAKE_ANTHROPIC, FAKE_GITHUB, ProjectTestCase
 
-from agentharness.hooks import dispatch
-from agentharness.progress import Progress
-from agentharness.store import AuditLog, SessionState
+from harnesspro.hooks import dispatch
+from harnesspro.progress import Progress
+from harnesspro.store import AuditLog, SessionState
 
 
 class PreToolUseTests(ProjectTestCase):
@@ -48,7 +49,7 @@ class PreToolUseTests(ProjectTestCase):
 
     def test_fail_closed(self):
         self.write_policy({"fail_mode": "closed"})
-        import agentharness.hooks as hooks
+        import harnesspro.hooks as hooks
 
         original = hooks.evaluate
         hooks.evaluate = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
@@ -60,7 +61,7 @@ class PreToolUseTests(ProjectTestCase):
         self.assertIn("boom", out["hookSpecificOutput"]["permissionDecisionReason"])
 
     def test_fail_open(self):
-        import agentharness.hooks as hooks
+        import harnesspro.hooks as hooks
 
         original = hooks.evaluate
         hooks.evaluate = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
@@ -78,7 +79,15 @@ class DispatchTests(ProjectTestCase):
     def test_bad_input(self):
         self.assertEqual(dispatch("PreToolUse", "not json").exit_code, 1)
         self.assertEqual(dispatch("PreToolUse", "[1]").exit_code, 1)
-        self.assertEqual(dispatch("NoSuchEvent", "{}").exit_code, 1)
+        self.assertEqual(dispatch("bad event!", "{}").exit_code, 1)
+
+    def test_unknown_future_events_are_logged_not_errors(self):
+        result = dispatch(
+            "BrandNewEvent", json.dumps({"session_id": "s", "cwd": self.project, "hook_event_name": "BrandNewEvent", "detail": "x"})
+        )
+        self.assertEqual((result.exit_code, result.stdout), (0, ""))
+        rec = AuditLog(self.path(".claude", "harness", "audit.jsonl")).read()[-1]
+        self.assertEqual((rec["event"], rec["detail"]), ("BrandNewEvent", "x"))
 
     def test_empty_input_is_tolerated(self):
         self.assertEqual(dispatch("SessionEnd", "").exit_code, 0)
@@ -230,7 +239,7 @@ class ClaimCheckTests(ProjectTestCase):
         self.assertEqual(out["decision"], "block")
         self.assertIn("All tests pass", out["reason"])
         res, _ = self.hook("Stop", last_assistant_message="All tests pass.")
-        self.assertEqual(res.stdout, "")  # max_blocks reached
+        self.assertEqual(res.stdout, "")
 
     def test_claim_after_test_run_is_fine(self):
         self.edit()
@@ -254,8 +263,8 @@ class ClaimCheckTests(ProjectTestCase):
         self.edit()
         res, _ = self.hook("Stop", last_assistant_message="I changed app.py; I have not run the tests yet.")
         self.assertEqual(res.stdout, "")
-        self.run_git("status")  # fresh state below
-        from agentharness.store import SessionState
+        self.run_git("status")
+        from harnesspro.store import SessionState
 
         SessionState(self.path(".claude", "harness"), "other").load()
         res, _ = self.hook("Stop", session_id="other", last_assistant_message="All tests pass.")
