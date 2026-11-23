@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -8,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from . import settings_merge
+from .assets import REPO_ROOT, asset_dir
 
 TEMPLATES = os.path.join(os.path.dirname(__file__), "templates")
 PROFILES = ("minimal", "standard", "strict")
@@ -85,6 +87,10 @@ def _file_contains(path: str, needle: str) -> bool:
 def default_hook_command() -> str:
     if shutil.which("harness"):
         return "harness"
+    launcher = os.path.join(REPO_ROOT, "bin", "harness")
+    installed = importlib.util.find_spec("harnesspro") is not None and not os.path.isfile(launcher)
+    if not installed and os.path.isfile(launcher):
+        return f'"{sys.executable}" "{launcher}"'
     return f'"{sys.executable}" -m harnesspro'
 
 
@@ -246,8 +252,8 @@ def init_project(
     )
 
     if with_agents:
-        _copy_tree_if_absent(os.path.join(TEMPLATES, "agents"), os.path.join(claude_dir, "agents"), report, dry_run)
-        _copy_tree_if_absent(os.path.join(TEMPLATES, "skills"), os.path.join(claude_dir, "skills"), report, dry_run)
+        _copy_tree_if_absent(asset_dir("agents"), os.path.join(claude_dir, "agents"), report, dry_run)
+        _copy_tree_if_absent(asset_dir("skills"), os.path.join(claude_dir, "skills"), report, dry_run)
 
     with open(os.path.join(TEMPLATES, "CLAUDE.md"), encoding="utf-8") as fh:
         template = fh.read().replace("{{TEST_COMMAND}}", test_cmd or "<add your test command>")

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 from . import __version__, gitinfo
+from . import limits as limitlib
 from . import secrets as secretlib
 from .config import LoadedPolicy, harness_dir, load_policy, project_dir
 from .cost import Meter
@@ -275,13 +276,29 @@ def post_tool_use_failure(h: Harness) -> HookResult:
 
 
 def user_prompt_submit(h: Harness) -> HookResult:
-    mode = h.policy.get("secrets.scan_prompts", "warn")
     prompt = h.payload.get("prompt") or ""
+    problem = limitlib.check_input(prompt, limitlib.input_limits(h.policy))
+    if problem:
+        h.log("UserPromptSubmit", decision="block", rules=["input-limit"], reason=problem, prompt_chars=len(prompt))
+        return _json({"decision": "block", "reason": f"{PREFIX}: {problem}"})
+    with h.state.update() as st:
+        st["length_blocks"] = 0
+    secret = scan_prompt(h, prompt)
+    if secret is not None:
+        return secret
+    instruction = limitlib.output_instruction(limitlib.output_limits(h.policy))
+    if instruction:
+        return _json({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": instruction}})
+    return HookResult()
+
+
+def scan_prompt(h: Harness, prompt: str) -> Optional[HookResult]:
+    mode = h.policy.get("secrets.scan_prompts", "warn")
     if mode == "off" or not prompt:
-        return HookResult()
+        return None
     found = secretlib.scan_text(prompt, allow_patterns=h.policy.get("secrets.allow_patterns", []), min_confidence=secretlib.HIGH)
     if not found:
-        return HookResult()
+        return None
     kinds = ", ".join(sorted({f.title for f in found}))
     h.log(
         "UserPromptSubmit",
@@ -336,6 +353,9 @@ def session_context(h: Harness) -> str:
         summary = Progress(h.dir).summary(max_chars=max(800, max_chars // 2))
         if summary:
             lines.append(summary)
+    instruction = limitlib.output_instruction(limitlib.output_limits(h.policy))
+    if instruction:
+        lines.append(instruction)
     if ctx.get("skills", True):
         names = available_skill_names(h)
         if names:
@@ -353,7 +373,7 @@ def available_skill_names(h: Harness) -> List[str]:
     roots = []
     plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
     if plugin_root:
-        roots.append(os.path.join(plugin_root, "src", "harnesspro", "templates", "skills"))
+        roots.append(os.path.join(plugin_root, "skills"))
     roots.append(os.path.join(h.project, ".claude", "skills"))
     names: List[str] = []
     for root in roots:
@@ -410,12 +430,28 @@ def check_claims(h: Harness, st: Dict[str, Any]) -> Optional[HookResult]:
     )
 
 
+def check_length(h: Harness, st: Dict[str, Any]) -> Optional[HookResult]:
+    limits = limitlib.output_limits(h.policy)
+    if not limits or st.get("length_blocks", 0) >= 1:
+        return None
+    problem = limitlib.check_output(str(h.payload.get("last_assistant_message") or ""), limits)
+    if not problem:
+        return None
+    with h.state.update() as s:
+        s["length_blocks"] = s.get("length_blocks", 0) + 1
+    h.log("Stop", gate="output length", reason=problem)
+    return _json({"decision": "block", "reason": f"{PREFIX}: {problem}"})
+
+
 def stop(h: Harness) -> HookResult:
     gate = h.policy.data.get("stop_gate", {})
     command = (gate.get("command") or "").strip()
     with h.state.update() as current:
         Meter(h.policy.get("cost.prices") or None).update(current, h.payload.get("transcript_path"))
     st = h.state.load()
+    length = check_length(h, st)
+    if length:
+        return length
     if not gate.get("enabled") or not command:
         blocked = check_claims(h, st)
         if blocked:

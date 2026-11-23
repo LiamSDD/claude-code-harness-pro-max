@@ -16,13 +16,39 @@ class PolicyError(ValueError):
     pass
 
 
+PROJECT_MARKERS = (
+    os.path.join(".claude", "harness"),
+    os.path.join(".claude", "settings.json"),
+    os.path.join(".claude", "settings.local.json"),
+)
+
+
+def configured_root(start: str) -> Optional[str]:
+    home = os.path.abspath(os.path.expanduser("~"))
+    current = os.path.abspath(start)
+    while True:
+        if current != home and any(os.path.exists(os.path.join(current, m)) for m in PROJECT_MARKERS):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def project_dir(payload: Optional[dict] = None) -> str:
+    cwd = payload.get("cwd") if payload and isinstance(payload.get("cwd"), str) else None
     env = os.environ.get("CLAUDE_PROJECT_DIR")
+    if cwd:
+        found = configured_root(cwd)
+        if found and not (env and os.path.abspath(env) != found and _inside(os.path.abspath(env), found)):
+            return found
     if env:
         return os.path.abspath(env)
-    if payload and isinstance(payload.get("cwd"), str) and payload["cwd"]:
-        return os.path.abspath(payload["cwd"])
-    return os.path.abspath(os.getcwd())
+    return os.path.abspath(cwd or os.getcwd())
+
+
+def _inside(path: str, root: str) -> bool:
+    return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
 
 
 def harness_dir(project: str) -> str:
@@ -137,6 +163,10 @@ SCHEMA: Dict[str, Any] = {
         "generated_reads": DECISIONS,
         "generated_paths": [_STR],
         "prices": _DICT,
+    },
+    "limits": {
+        "output": {"max_words": _INT, "min_words": _INT, "max_chars": _INT, "min_chars": _INT},
+        "input": {"max_words": _INT, "min_words": _INT, "max_chars": _INT, "min_chars": _INT},
     },
     "subagents": {"max_per_session": _INT, "max_concurrent": _INT, "on_limit": DECISIONS, "models": _DICT},
     "context": {

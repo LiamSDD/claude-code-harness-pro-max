@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harness-pro-max"
-version = "2.0.0"
+version = "2.1.0"
 description = "Claude Code Harness Pro Max: guardrails, token and cost control, multi-agent orchestration and verification for Claude Code"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -35,11 +35,14 @@ harness = "harnesspro.cli:main"
 Repository = "https://github.com/priveight02/claude-code-harness-pro-max"
 Changelog = "https://github.com/priveight02/claude-code-harness-pro-max/blob/main/CHANGELOG.md"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+package-dir = { "" = "src", "harnesspro.bundled_skills" = "skills", "harnesspro.bundled_agents" = "agents" }
+packages = ["harnesspro", "harnesspro.bundled_skills", "harnesspro.bundled_agents"]
 
 [tool.setuptools.package-data]
-harnesspro = ["defaults/*.json", "templates/*.md", "templates/agents/*.md", "templates/skills/*/*.md"]
+harnesspro = ["defaults/*.json", "templates/*.md"]
+"harnesspro.bundled_skills" = ["*/*.md", "*/*/*.md"]
+"harnesspro.bundled_agents" = ["*.md"]
 
 [tool.ruff]
 line-length = 140

@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from .assets import asset_dir
 from .vet import HIGH, MEDIUM, Vetter
 
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -173,8 +174,7 @@ def check_skill(path: str, root_is_skill: bool = False) -> List[Issue]:
 
 
 def default_locations(project: str, plugin_root: Optional[str] = None) -> List[Tuple[str, str]]:
-    here = os.path.join(os.path.dirname(__file__), "templates", "skills")
-    locs = [("harness-pro-max", plugin_root and os.path.join(plugin_root, "src", "harnesspro", "templates", "skills") or here)]
+    locs = [("harness-pro-max", os.path.join(plugin_root, "skills") if plugin_root else asset_dir("skills"))]
     locs.append(("project", os.path.join(project, ".claude", "skills")))
     base = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
     locs.append(("user", os.path.join(base, "skills")))

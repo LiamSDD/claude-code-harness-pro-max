@@ -73,6 +73,25 @@ class PreToolUseTests(ProjectTestCase):
         self.assertIn("boom", res.stderr)
 
 
+class ProjectResolutionTests(ProjectTestCase):
+    def test_session_that_moved_folders_uses_the_current_project(self):
+        other = os.path.join(self.tmp, "moved-to")
+        os.makedirs(os.path.join(other, ".claude", "harness"))
+        with open(os.path.join(other, ".claude", "harness", "policy.json"), "w") as fh:
+            json.dump({"disable": ["env-dump"]}, fh)
+        _, out = self.hook("PreToolUse", cwd=other, tool_name="Bash", tool_input={"command": "env"})
+        self.assertEqual(out, "")
+        _, out = self.hook("PreToolUse", tool_name="Bash", tool_input={"command": "env"})
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
+
+    def test_subdirectory_resolves_to_its_project(self):
+        self.write(".claude/harness/policy.json", json.dumps({"disable": ["env-dump"]}))
+        sub = self.path("src", "pkg")
+        os.makedirs(sub)
+        _, out = self.hook("PreToolUse", cwd=sub, tool_name="Bash", tool_input={"command": "env"})
+        self.assertEqual(out, "")
+
+
 class DispatchTests(ProjectTestCase):
     git = False
 

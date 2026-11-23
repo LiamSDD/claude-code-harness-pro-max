@@ -11,27 +11,28 @@ Workflows and tools for Claude Code. As a plugin it also installs guardrail and 
 
 | Situation | Read |
 | --- | --- |
-| New work with open choices | [brainstorming](src/harnesspro/templates/skills/brainstorming/SKILL.md), then [writing-plans](src/harnesspro/templates/skills/writing-plans/SKILL.md) |
-| Carry out a plan yourself | [executing-plans](src/harnesspro/templates/skills/executing-plans/SKILL.md) |
-| Carry out a plan with an agent per task | [subagent-driven-development](src/harnesspro/templates/skills/subagent-driven-development/SKILL.md) |
-| Many files to read, many agents, independent changes | [orchestrating-agent-teams](src/harnesspro/templates/skills/orchestrating-agent-teams/SKILL.md) |
-| Large codebase, long session, budget | [optimizing-token-usage](src/harnesspro/templates/skills/optimizing-token-usage/SKILL.md) |
-| Multi-session work, "continue" | [feature-loop](src/harnesspro/templates/skills/feature-loop/SKILL.md) |
-| Writing production code | [test-driven-development](src/harnesspro/templates/skills/test-driven-development/SKILL.md) |
-| A bug or failing test | [systematic-debugging](src/harnesspro/templates/skills/systematic-debugging/SKILL.md) |
-| About to say it works | [verification-before-completion](src/harnesspro/templates/skills/verification-before-completion/SKILL.md) |
-| Review | [requesting-code-review](src/harnesspro/templates/skills/requesting-code-review/SKILL.md), [receiving-code-review](src/harnesspro/templates/skills/receiving-code-review/SKILL.md) |
-| Independent problems | [dispatching-parallel-agents](src/harnesspro/templates/skills/dispatching-parallel-agents/SKILL.md) |
-| Isolation and integration | [using-git-worktrees](src/harnesspro/templates/skills/using-git-worktrees/SKILL.md), [finishing-a-development-branch](src/harnesspro/templates/skills/finishing-a-development-branch/SKILL.md) |
-| Ending a session | [session-handoff](src/harnesspro/templates/skills/session-handoff/SKILL.md) |
-| Releasing | [release-check](src/harnesspro/templates/skills/release-check/SKILL.md) |
-| Writing a skill | [writing-skills](src/harnesspro/templates/skills/writing-skills/SKILL.md) |
+| New work with open choices | [brainstorming](skills/brainstorming/SKILL.md), then [writing-plans](skills/writing-plans/SKILL.md) |
+| Carry out a plan yourself | [executing-plans](skills/executing-plans/SKILL.md) |
+| Carry out a plan with an agent per task | [subagent-driven-development](skills/subagent-driven-development/SKILL.md) |
+| Many files to read, many agents, independent changes | [orchestrating-agent-teams](skills/orchestrating-agent-teams/SKILL.md) |
+| Large codebase, long session, budget | [optimizing-token-usage](skills/optimizing-token-usage/SKILL.md) |
+| Reply, prompt, effort, model, budget or agent limits | [managing-limits](skills/managing-limits/SKILL.md) |
+| Multi-session work, "continue" | [feature-loop](skills/feature-loop/SKILL.md) |
+| Writing production code | [test-driven-development](skills/test-driven-development/SKILL.md) |
+| A bug or failing test | [systematic-debugging](skills/systematic-debugging/SKILL.md) |
+| About to say it works | [verification-before-completion](skills/verification-before-completion/SKILL.md) |
+| Review | [requesting-code-review](skills/requesting-code-review/SKILL.md), [receiving-code-review](skills/receiving-code-review/SKILL.md) |
+| Independent problems | [dispatching-parallel-agents](skills/dispatching-parallel-agents/SKILL.md) |
+| Isolation and integration | [using-git-worktrees](skills/using-git-worktrees/SKILL.md), [finishing-a-development-branch](skills/finishing-a-development-branch/SKILL.md) |
+| Ending a session | [session-handoff](skills/session-handoff/SKILL.md) |
+| Releasing | [release-check](skills/release-check/SKILL.md) |
+| Writing a skill | [writing-skills](skills/writing-skills/SKILL.md) |
 
-Full map: [using-harness-pro-max](src/harnesspro/templates/skills/using-harness-pro-max/SKILL.md).
+Full map: [using-harness-pro-max](skills/using-harness-pro-max/SKILL.md).
 
 ## Subagent briefs
 
-[src/harnesspro/templates/agents](src/harnesspro/templates/agents): `explorer` (haiku, read-only search), `implementer`, `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. As a plugin they are registered automatically; as a skill, pass the file's instructions to a subagent.
+[agents](agents): `explorer` (haiku, read-only search), `implementer`, `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. As a plugin they are registered automatically; as a skill, pass the file's instructions to a subagent.
 
 ## Tools
 

@@ -15,6 +15,7 @@ The harness gives you guardrails, token guards, memory between sessions (`.claud
 | A plan with several tasks | `executing-plans` (inline) or `subagent-driven-development` (agent per task) |
 | Wide reading, many independent changes, verification by others | `orchestrating-agent-teams` |
 | Large codebase, long session, budget, "reduce cost" | `optimizing-token-usage` |
+| "Keep answers under N words", "limit my prompts", "low effort", "reset limits" | `managing-limits` |
 | Work across sessions, "continue", "next feature" | `feature-loop` |
 | Writing production code | `test-driven-development` |
 | A bug, failing test or surprising behaviour | `systematic-debugging` |
@@ -51,10 +52,15 @@ The harness gives you guardrails, token guards, memory between sessions (`.claud
 - **The stop gate**, when enabled, runs the tests when you finish.
 - **Session context** at start-up lists git state, the next feature and recent progress notes.
 
+## On other agents
+
+Tool names differ per platform; read the matching reference: [Claude Code](references/claude-code-tools.md), [Codex](references/codex-tools.md), [Cursor](references/cursor-tools.md), [Gemini CLI](references/gemini-tools.md), [Antigravity](references/antigravity-tools.md), [Kimi Code](references/kimi-tools.md), [OpenCode](references/opencode-tools.md), [anything else](references/generic-tools.md).
+
 ## Commands
 
 ```bash
 harness progress show | start <id> | done <id> "evidence" | note "..." | import <plan.md>
 harness check bash "<command>"
 harness cost --since 1d
+harness limits show --set-only
 ```

@@ -5,7 +5,7 @@ from helpers import ROOT, ProjectTestCase
 
 from harnesspro import skills
 
-SHIPPED = os.path.join(ROOT, "src", "harnesspro", "templates", "skills")
+SHIPPED = os.path.join(ROOT, "skills")
 
 
 class FrontmatterTests(unittest.TestCase):
