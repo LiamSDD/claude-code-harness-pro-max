@@ -2,6 +2,13 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] - 2026-11-24
+
+### Changed
+
+- Repository moved to `LiamSDD/claude-code-harness-pro-max`; install commands and manifests updated.
+- README rewritten; limit messages use singular "word" and "character" when the count is 1.
+
 ## [2.1.1] - 2026-11-24
 
 ### Changed
@@ -85,8 +92,9 @@ Renamed to **Claude Code Harness Pro Max**. Plugin and skill id `harness-pro-max
 - Subagents: `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. Skills: `feature-loop`, `session-handoff`, `release-check`, `harness-policy`.
 - Claude Code plugin manifest, hooks file and single-plugin marketplace.
 
-[2.1.1]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.1.1
-[2.1.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.1.0
-[2.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.0.0
-[1.1.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.1.0
-[1.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.0.0
+[2.1.2]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v2.1.2
+[2.1.1]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v2.1.1
+[2.1.0]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v2.1.0
+[2.0.0]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v2.0.0
+[1.1.0]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v1.1.0
+[1.0.0]: https://github.com/LiamSDD/claude-code-harness-pro-max/releases/tag/v1.0.0

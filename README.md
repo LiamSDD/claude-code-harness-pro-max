@@ -9,7 +9,7 @@
 Stops destructive commands and leaked secrets, cuts wasted tokens, enforces the limits you set,<br>
 coordinates subagents, and makes Claude prove its work before it says "done".
 
-[![Version](https://img.shields.io/badge/version-2.1.1-0ea5e9)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.1.2-0ea5e9)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.9%2B-334155)](pyproject.toml)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-16a34a)](pyproject.toml)
 [![Tests](https://img.shields.io/badge/tests-238%20passing-16a34a)](tests)
@@ -42,7 +42,7 @@ Zero dependencies (Python 3.9+ standard library). Hooks answer in about 90 ms an
 **Claude Code plugin** (recommended): hooks, skills, subagents and the `harness` command in one step.
 
 ```text
-/plugin marketplace add priveight02/claude-code-harness-pro-max
+/plugin marketplace add LiamSDD/claude-code-harness-pro-max
 /plugin install harness-pro-max@harness-pro-max
 ```
 
@@ -52,7 +52,7 @@ Zero dependencies (Python 3.9+ standard library). Hooks answer in about 90 ms an
 **Per project, without the plugin**
 
 ```bash
-pipx install git+https://github.com/priveight02/claude-code-harness-pro-max
+pipx install git+https://github.com/LiamSDD/claude-code-harness-pro-max
 cd your-project
 harness init          # profiles: minimal | standard | strict
 harness doctor
@@ -61,7 +61,7 @@ harness doctor
 **Skills only** (workflows and `bin/harness`, no hooks)
 
 ```bash
-git clone https://github.com/priveight02/claude-code-harness-pro-max ~/.claude/skills/harness-pro-max
+git clone https://github.com/LiamSDD/claude-code-harness-pro-max ~/.claude/skills/harness-pro-max
 ```
 
 **Codex, Cursor, Gemini CLI, Antigravity, Kimi Code, OpenCode**: see [Other agents](#other-agents).

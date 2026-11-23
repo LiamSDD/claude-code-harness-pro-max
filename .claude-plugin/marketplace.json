@@ -2,7 +2,7 @@
   "name": "harness-pro-max",
   "description": "Claude Code Harness Pro Max: guardrails, token and cost control, limits and engineering workflows.",
   "owner": {
-    "name": "priveight02"
+    "name": "LiamSDD"
   },
   "plugins": [
     {

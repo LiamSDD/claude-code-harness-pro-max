@@ -5,11 +5,11 @@ The content is the same everywhere: the skills in `skills/`, the subagent briefs
 ## Claude Code
 
 ```text
-/plugin marketplace add priveight02/claude-code-harness-pro-max
+/plugin marketplace add LiamSDD/claude-code-harness-pro-max
 /plugin install harness-pro-max@harness-pro-max
 ```
 
-Everything is active: guardrail, token and limit hooks, 21 skills, 7 subagents, `harness` on the Bash path. Without the plugin: `pipx install git+https://github.com/priveight02/claude-code-harness-pro-max`, then `harness init` in each project.
+Everything is active: guardrail, token and limit hooks, 21 skills, 7 subagents, `harness` on the Bash path. Without the plugin: `pipx install git+https://github.com/LiamSDD/claude-code-harness-pro-max`, then `harness init` in each project.
 
 ## Cursor
 
@@ -38,7 +38,7 @@ Tool names: `skills/using-harness-pro-max/references/codex-tools.md`. Run harnes
 ## Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/priveight02/claude-code-harness-pro-max
+gemini extensions install https://github.com/LiamSDD/claude-code-harness-pro-max
 ```
 
 `gemini-extension.json` declares `GEMINI.md`, which loads the skill map and the Gemini tool mapping at session start.
@@ -56,7 +56,7 @@ The repository ships `.kimi-plugin/plugin.json`, which loads `using-harness-pro-
 Clone into the agent's skills folder:
 
 ```bash
-git clone https://github.com/priveight02/claude-code-harness-pro-max ~/.agents/skills/harness-pro-max
+git clone https://github.com/LiamSDD/claude-code-harness-pro-max ~/.agents/skills/harness-pro-max
 ```
 
 `~/.agents/skills/` is read by several agents (Codex, Gemini CLI, Copilot CLI); OpenCode also reads `~/.config/opencode/skills/`. Tool names: `references/opencode-tools.md` and `references/generic-tools.md`.

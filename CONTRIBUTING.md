@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/priveight02/claude-code-harness-pro-max && cd claude-code-harness-pro-max
+git clone https://github.com/LiamSDD/claude-code-harness-pro-max && cd claude-code-harness-pro-max
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 make check

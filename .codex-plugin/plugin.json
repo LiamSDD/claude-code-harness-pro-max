@@ -1,13 +1,13 @@
 {
   "name": "harness-pro-max",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
   "author": {
-    "name": "priveight02",
-    "url": "https://github.com/priveight02"
+    "name": "LiamSDD",
+    "url": "https://github.com/LiamSDD"
   },
-  "homepage": "https://github.com/priveight02/claude-code-harness-pro-max",
-  "repository": "https://github.com/priveight02/claude-code-harness-pro-max",
+  "homepage": "https://github.com/LiamSDD/claude-code-harness-pro-max",
+  "repository": "https://github.com/LiamSDD/claude-code-harness-pro-max",
   "license": "MIT",
   "keywords": [
     "skills",
@@ -27,7 +27,7 @@
     "displayName": "Claude Code Harness Pro Max",
     "shortDescription": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
     "longDescription": "Harness Pro Max guides and guards agent work: brainstorming, plans, test-driven development, systematic debugging, agent teams, code review and release workflows, plus a shell-aware policy engine, token guards, output and input limits, budgets and cost analytics.",
-    "developerName": "priveight02",
+    "developerName": "LiamSDD",
     "category": "Developer Tools",
     "capabilities": [
       "Interactive",
@@ -38,6 +38,6 @@
       "Plan and build this feature with tests.",
       "Find out why this test fails."
     ],
-    "websiteURL": "https://github.com/priveight02/claude-code-harness-pro-max"
+    "websiteURL": "https://github.com/LiamSDD/claude-code-harness-pro-max"
   }
 }

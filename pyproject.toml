@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harness-pro-max"
-version = "2.1.1"
+version = "2.1.2"
 description = "Claude Code Harness Pro Max: guardrails, token and cost control, multi-agent orchestration and verification for Claude Code"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "priveight02" }]
+authors = [{ name = "LiamSDD" }]
 keywords = ["claude-code", "ai-agents", "guardrails", "hooks", "llm", "security", "cost", "tokens", "subagents"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -32,8 +32,8 @@ dev = ["ruff>=0.6", "pytest>=8", "coverage>=7", "build>=1"]
 harness = "harnesspro.cli:main"
 
 [project.urls]
-Repository = "https://github.com/priveight02/claude-code-harness-pro-max"
-Changelog = "https://github.com/priveight02/claude-code-harness-pro-max/blob/main/CHANGELOG.md"
+Repository = "https://github.com/LiamSDD/claude-code-harness-pro-max"
+Changelog = "https://github.com/LiamSDD/claude-code-harness-pro-max/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = { "" = "src", "harnesspro.bundled_skills" = "skills", "harnesspro.bundled_agents" = "agents" }
