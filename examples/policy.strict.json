@@ -1,0 +1,15 @@
+{
+  "$comment": "Strict policy for unattended runs. Copy to .claude/harness/policy.json.",
+  "version": 1,
+  "mode": "enforce",
+  "fail_mode": "closed",
+  "bash": { "sudo": "deny", "on_parse_error": "deny" },
+  "paths": { "write_outside_project": "deny" },
+  "secrets": { "scan_prompts": "block", "scan_commands": "deny" },
+  "web": {
+    "allow_domains": ["docs.python.org", "developer.mozilla.org", "nodejs.org", "pypi.org", "npmjs.com", "github.com"]
+  },
+  "mcp": { "ask_tools": ["mcp__*__create*", "mcp__*__update*", "mcp__*__merge*"] },
+  "stop_gate": { "enabled": true, "command": "make test", "timeout": 600, "max_blocks": 5 },
+  "notify": { "enabled": true }
+}

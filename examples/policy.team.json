@@ -1,0 +1,22 @@
+{
+  "$comment": "A typical team policy layered on the defaults.",
+  "version": 1,
+  "bash": {
+    "rules": [
+      { "id": "no-prod-deploy", "pattern": "deploy\\.sh\\s+(prod|production)", "decision": "deny", "reason": "Production deploys run from CI after review." },
+      { "id": "migrations-ask", "pattern": "^(npx\\s+)?prisma migrate deploy|alembic upgrade", "decision": "ask", "reason": "Applying migrations changes a shared database." }
+    ]
+  },
+  "paths": {
+    "ask_write": ["db/migrations/**", "infra/**"],
+    "deny_write": ["vendor/**", "src/generated/**"]
+  },
+  "post_edit": {
+    "formatters": [
+      { "glob": "*.py", "command": "ruff format --quiet {file}" },
+      { "glob": "*.ts", "command": "npx prettier --write {file}" },
+      { "glob": "*.tsx", "command": "npx prettier --write {file}" }
+    ]
+  },
+  "stop_gate": { "enabled": true, "command": "npm test", "timeout": 300 }
+}
