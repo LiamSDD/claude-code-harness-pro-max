@@ -2,6 +2,25 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-11-24
+
+### Added
+
+- `harness limits`: minimum and maximum reply length (words, characters) and per-response token cap; minimum and maximum prompt length; effort, model, turns, budget, subagent concurrency, per-session count and depth, web searches, bash output, file read size, compaction threshold and thinking. `show`, `set`, `output` and `input` shortcuts, and `reset` for one limit, a group or all; `--shared` and `--user` scopes. Prompt limits block in `UserPromptSubmit`; reply limits are injected on every prompt and enforced once per turn in `Stop`.
+- `managing-limits` skill.
+- Cross-platform packaging: Codex (`.codex-plugin`, `.agents/plugins/marketplace.json`), Cursor (`.cursor-plugin` with `hooks/hooks-cursor.json`), Antigravity, Gemini CLI (`gemini-extension.json`, `GEMINI.md`), Kimi Code; tool-name maps for each and a generic fallback.
+- `harness hook --platform cursor`: Cursor adapter for `sessionStart`, `beforeSubmitPrompt`, `beforeShellExecution`, `beforeReadFile`, `beforeMCPExecution`, `afterFileEdit`, `stop`, `sessionEnd`, `subagentStart`, `subagentStop`; bootstrap for other platforms.
+- `AGENTS.md` and `docs/platforms.md`.
+
+### Changed
+
+- Skills and subagents moved to the top-level `skills/` and `agents/` folders (the layout every platform expects); the Python package bundles them.
+
+### Fixed
+
+- The project is located from the session's current directory before `CLAUDE_PROJECT_DIR`, so a session that changed folders uses that folder's policy (found by a live test: subagent routing was ignored after a folder change).
+- `harness init` from a source checkout wires hooks to the checkout's `bin/harness` instead of a module that is not installed.
+
 ## [2.0.0] - 2026-11-24
 
 Renamed to **Claude Code Harness Pro Max**. Plugin and skill id `harness-pro-max`, Python package `harness-pro-max` (module `harnesspro`), command `harness`.
@@ -59,6 +78,7 @@ Renamed to **Claude Code Harness Pro Max**. Plugin and skill id `harness-pro-max
 - Subagents: `code-reviewer`, `test-runner`, `security-auditor`, `planner`, `evaluator`. Skills: `feature-loop`, `session-handoff`, `release-check`, `harness-policy`.
 - Claude Code plugin manifest, hooks file and single-plugin marketplace.
 
+[2.1.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.1.0
 [2.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v2.0.0
 [1.1.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.1.0
 [1.0.0]: https://github.com/priveight02/claude-code-harness-pro-max/releases/tag/v1.0.0

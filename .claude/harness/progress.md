@@ -25,3 +25,9 @@ Renamed to Claude Code Harness Pro Max. Added the economy layer (token guards, s
 Measured on real sessions: cache reads dominate Claude Code cost, so the guards target what enters the context.
 
 Next: #8 JSON Schema for policy files.
+
+### 2026-11-23 23:59 · v2.1.0
+
+Added harness limits (reply and prompt length, token cap, effort, model, turns, budget, subagents, web searches, output and read sizes, compaction, thinking) with reset, the managing-limits skill, and packaging for Codex, Cursor, Gemini CLI, Antigravity and Kimi with a Cursor hook adapter.
+
+Live test in a real Claude Code session: hooks refused unbounded git log, a .env read and an unchanged re-read; an Explore subagent was routed to haiku. The test found that a session which changes folders kept the old CLAUDE_PROJECT_DIR; fixed by resolving the project from the current directory first.

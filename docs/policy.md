@@ -150,6 +150,15 @@ Spend is computed from the session transcript Claude Code writes, read increment
 | `token-output-flood` | `cat`/`less` of large files, `find /` or `find ~` without `-maxdepth`, `tail -f`, `watch`, `docker`/`kubectl logs` without `--tail`/`--since`, `journalctl` without `-n`/`--since`, `git log` without a limit, `ls -R`/`tree` of the project |
 | `budget-exceeded` | any tool call once the session budget is reached |
 
+### `limits`
+
+Usually set with `harness limits`. All values are positive integers; absent means unlimited.
+
+| Key | Enforced in |
+| --- | --- |
+| `limits.output.max_words`, `min_words`, `max_chars`, `min_chars` | `UserPromptSubmit` (instruction) and `Stop` (one rewrite per turn) |
+| `limits.input.max_words`, `min_words`, `max_chars`, `min_chars` | `UserPromptSubmit` (blocks the prompt; slash commands are exempt) |
+
 ### `subagents`
 
 | Key | Default | Meaning |

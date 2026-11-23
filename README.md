@@ -1,6 +1,6 @@
 # Claude Code Harness Pro Max
 
-Guardrails, token and cost control, multi-agent orchestration and verification for [Claude Code](https://code.claude.com).
+Guardrails, token and cost control, limits, multi-agent orchestration and verification for [Claude Code](https://code.claude.com), with skills and adapters for Codex, Cursor, Gemini CLI, Antigravity, Kimi Code and OpenCode.
 
 Install it once and every Claude Code session in the project gets:
 
@@ -9,11 +9,12 @@ Install it once and every Claude Code session in the project gets:
 | **Guardrails** | Every shell command is parsed (chains, pipes, `$(...)`, `bash -c`, heredocs, `sudo`/`env` wrappers) and checked against 27 rules: no `rm -rf ~`, no `curl \| bash`, no force-push to `main`, no reading `.env` or SSH keys, no secrets written into code. |
 | **Token guards** | Refuses re-reads of unchanged files, reads of lockfiles, minified bundles and `node_modules`, oversized reads, and commands that flood the context (`git log`, `find /`, logs without `--tail`, `tail -f`). Claude gets a one-line alternative instead. |
 | **Subagent control** | Routes subagents to cheaper models per type, caps how many run at once and per session. |
+| **Limits** | Set a minimum and maximum reply length (words, characters, tokens) and prompt length; set effort, model, turns, subagents, web searches, output and read sizes. `harness limits reset` returns any of them to unlimited. |
 | **Budgets** | Live spend per session from Claude Code's own transcript; warns near the limit, asks before every tool call once it is reached. |
 | **Cost analytics** | `harness cost` reads your Claude Code transcripts and reports spend by model, main session vs subagents, tool output and cache hit rate, with ranked fixes. |
 | **Verification** | Claude cannot claim "tests pass" after edits without a passing run since; an optional gate runs your tests before it may stop. |
 | **Memory** | Feature list and handoff log in the repo; each session starts with git state, the next feature and recent notes. |
-| **Workflows** | 20 skills (TDD, debugging, plans, agent teams, token optimization, review, release) and 7 subagents, including a Haiku `explorer` for cheap wide reading. |
+| **Workflows** | 21 skills (TDD, debugging, plans, agent teams, token optimization, review, release) and 7 subagents, including a Haiku `explorer` for cheap wide reading. |
 | **Audit** | Every decision in a redacted, rotated JSONL log. |
 | **Stays current** | Unknown future hook events are logged instead of failing; `harness upstream` checks Claude Code's docs for new events and registers them. |
 
@@ -53,6 +54,8 @@ harness doctor                       # verify everything, including a live hook 
 harness optimize                     # preview token-saving settings
 harness optimize --apply --budget 10 # apply them with a $10 per-session budget
 harness cost --since 7d              # see what you spend and where
+harness limits output --max-words 200 --max-tokens 4000
+harness limits reset all             # back to unlimited
 ```
 
 ## Commands
@@ -63,6 +66,11 @@ harness cost --since 7d              # see what you spend and where
 | `harness doctor [--json]` | Validate policy layers, run a behavioural self-test and the real hook, check storage and tools. |
 | `harness optimize [--profile balanced\|lean] [--budget USD] [--apply]` | Set Claude Code's token limits (bash output, file reads, concurrent subagents, nesting, web searches, compaction), deny reads of generated files, route subagents to cheaper models. Shows the changes unless `--apply`. |
 | `harness cost [files] [--since 7d] [--all] [--top N] [--json]` | Spend and token report from Claude Code transcripts with ranked recommendations. |
+| `harness limits [show] [--set-only] [--json]` | Every limit with its current value and where it is set. |
+| `harness limits output [--max-words N] [--min-words N] [--max-chars N] [--min-chars N] [--max-tokens N]` | Reply length limits. |
+| `harness limits input [--max-words N] [--min-words N] [--max-chars N] [--min-chars N]` | Prompt length limits. |
+| `harness limits set <limit> <value> [...]` | Any limit: `effort`, `model`, `turns.max`, `budget`, `subagents.max-concurrent`, `subagents.max-per-session`, `subagents.max-depth`, `web.max-searches`, `bash.max-output-chars`, `read.max-tokens`, `compact.at-percent`, `thinking off`. |
+| `harness limits reset <limit>\|output\|input\|subagents\|all` | Back to unlimited or default. All `limits` commands take `--shared` (whole team) or `--user` (all your projects). |
 | `harness check bash\|read\|write\|url\|tool <value> [--json]` | Dry-run a policy decision. Exit 0 allow, 3 ask, 2 deny. |
 | `harness progress show\|add\|start\|done\|block\|reopen\|note\|summary\|import` | Feature list and handoff log; `import plan.md` turns `### Task N:` headings into features. |
 | `harness audit [--tail N] [--blocked] [--stats] [--session ID] [--json]` | Read the audit log. |
@@ -72,7 +80,7 @@ harness cost --since 7d              # see what you spend and where
 | `harness policy show\|sources\|validate` | Inspect the effective policy. |
 | `harness upstream [--apply] [--file doc.md]` | Compare with Claude Code's current hook events; register new ones. |
 | `harness statusline` | Status line: branch, model, context %, cost, blocked actions, saved calls, budget, features. |
-| `harness hook <Event>` | Entry point Claude Code calls for each hook event. |
+| `harness hook <Event> [--platform cursor\|codex\|...]` | Entry point the agent calls for each hook event. |
 
 ## Cutting token cost
 
@@ -110,6 +118,32 @@ Recommendations (largest estimated saving first)
 ```
 
 Savings depend on how a team works; run `harness cost --since 7d` before and after `harness optimize --apply` to see yours. Prices are editable under `cost.prices` in the policy.
+
+## Limits
+
+```console
+$ harness limits output --min-words 50 --max-words 200 --max-tokens 4000
+$ harness limits input --max-chars 2000 --min-words 2
+$ harness limits set effort medium budget 5
+$ harness limits show --set-only
+  limit                      value          set in   what it controls
+  output.max-tokens          4000           local    Maximum tokens Claude may generate per response
+  output.max-words           200            local    Longest reply in words; longer replies are sent back to be shortened (hook)
+  output.min-words           50             local    Shortest reply in words; shorter replies are sent back to be expanded (hook)
+  input.max-chars            2000           local    Longest prompt you can send, in characters (hook)
+  ...
+$ harness limits reset output     # or: input, subagents, a single limit, all
+```
+
+| Limit | How it holds |
+| --- | --- |
+| `output.max-tokens` | Claude Code's own hard cap per response |
+| Reply words and characters | Told to Claude on every prompt; a reply outside the range is sent back once to be rewritten |
+| Prompt words and characters | A prompt outside the range is stopped before it is sent, with the reason and the reset command |
+| Effort, model, turns, subagents, web searches, bash output, reads, compaction, thinking | Claude Code settings, applied from the next session |
+| Budget | Checked before every tool call |
+
+Ask in plain words too: the `managing-limits` skill turns "keep answers under 100 words" or "reset the limits" into the right command.
 
 ## Multi-agent work
 
@@ -185,6 +219,22 @@ Policy is layered JSON: built-in defaults, `~/.claude/harness/policy.json`, `.cl
 
 `"mode": "warn"` logs and shows every would-be decision without blocking. References: [policy](docs/policy.md), [hooks](docs/hooks.md), [architecture](docs/architecture.md).
 
+## Other agents
+
+The skills are plain `SKILL.md` folders and work on every agent that reads skills. Each platform gets a manifest, a session-start bootstrap and a tool-name map:
+
+| Platform | Install | What runs |
+| --- | --- | --- |
+| Claude Code | plugin (above) | everything: hooks, skills, subagents, limits, status line |
+| Cursor | `.cursor-plugin/` | skills, plus hooks for session start, prompts (secrets, input limits), shell (policy, token guards), file reads, MCP calls, edits |
+| Codex | `.codex-plugin/`, `.agents/plugins/marketplace.json` | skills, `AGENTS.md`, `bin/harness` tools |
+| Gemini CLI | `gemini-extension.json` + `GEMINI.md` | skills and bootstrap context, `bin/harness` tools |
+| Antigravity | `.antigravity-plugin/` | skills, `bin/harness` tools |
+| Kimi Code | `.kimi-plugin/` | skills with session-start skill and tool mapping |
+| OpenCode, Copilot CLI, others | clone into the agent's skills folder (`~/.agents/skills/` works for several) | skills, `bin/harness` tools |
+
+Step-by-step install for each: [docs/platforms.md](docs/platforms.md).
+
 ## Staying current with Claude Code
 
 - Hook events the harness does not know yet are accepted and logged, never errors.
@@ -194,7 +244,7 @@ Policy is layered JSON: built-in defaults, `~/.claude/harness/policy.json`, `.cl
 ## Development
 
 ```bash
-make test     # 218 tests
+make test     # 238 tests
 make lint     # ruff
 make check    # lint, tests, policy validation, secret scan, skill lint, self-vet
 ```

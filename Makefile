@@ -22,7 +22,7 @@ build:
 check: lint test
 	./bin/harness policy validate
 	./bin/harness scan --high-only src hooks .claude-plugin
-	./bin/harness skills check src/harnesspro/templates/skills SKILL.md
+	./bin/harness skills check skills SKILL.md
 	./bin/harness vet .
 
 clean:

@@ -261,6 +261,34 @@
       "notes": "covered by the unittest suite (218 tests) and make check",
       "created_at": "2026-11-23T22:27:53.138Z",
       "updated_at": "2026-11-23T22:27:53.605Z"
+    },
+    {
+      "id": 20,
+      "title": "Output, input and settings limits with reset",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Prompts outside the limits are stopped; replies outside are sent back once",
+        "harness limits reset returns any limit to unlimited"
+      ],
+      "notes": "unit tests (238) and a live test in a Claude Code session",
+      "created_at": "2026-11-23T22:59:23.528Z",
+      "updated_at": "2026-11-23T22:59:23.858Z"
+    },
+    {
+      "id": 21,
+      "title": "Cross-platform packaging and Cursor adapter",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Manifests for Codex, Cursor, Antigravity, Gemini CLI and Kimi",
+        "Cursor hooks run the policy, token guards and prompt limits"
+      ],
+      "notes": "unit tests (238) and a live test in a Claude Code session",
+      "created_at": "2026-11-23T22:59:23.694Z",
+      "updated_at": "2026-11-23T22:59:24.017Z"
     }
   ]
 }
