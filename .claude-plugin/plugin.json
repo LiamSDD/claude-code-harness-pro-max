@@ -28,5 +28,11 @@
     "./agents/security-auditor.md",
     "./agents/planner.md",
     "./agents/evaluator.md"
-  ]
+  ],
+  "icon": "./.claude-plugin/icon.png",
+  "network": {
+    "hosts": [
+      "code.claude.com"
+    ]
+  }
 }
