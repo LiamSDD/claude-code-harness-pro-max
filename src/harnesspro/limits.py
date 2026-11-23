@@ -399,6 +399,10 @@ def input_limits(policy) -> Dict[str, int]:
     return {k: int(v) for k, v in out.items() if isinstance(v, (int, float)) and v > 0}
 
 
+def plural(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
 def count_words(text: str) -> int:
     return len(re.findall(r"\S+", text or ""))
 
@@ -427,13 +431,13 @@ def output_instruction(limits: Dict[str, int]) -> Optional[str]:
 def check_output(text: str, limits: Dict[str, int]) -> Optional[str]:
     words, chars = count_words(text), len((text or "").strip())
     if limits.get("max_words") and words > limits["max_words"]:
-        return f"your reply is {words} words; the user's limit is {limits['max_words']}. Rewrite it in at most {limits['max_words']} words, keeping the essential content."
+        return f"your reply is {plural(words, 'word')}; the user's limit is {limits['max_words']}. Rewrite it in at most {limits['max_words']} words, keeping the essential content."
     if limits.get("max_chars") and chars > limits["max_chars"]:
-        return f"your reply is {chars} characters; the user's limit is {limits['max_chars']}. Rewrite it in at most {limits['max_chars']} characters."
+        return f"your reply is {plural(chars, 'character')}; the user's limit is {limits['max_chars']}. Rewrite it in at most {limits['max_chars']} characters."
     if limits.get("min_words") and words < limits["min_words"]:
-        return f"your reply is {words} words; the user asked for at least {limits['min_words']}. Expand it with useful detail (not filler) to at least {limits['min_words']} words."
+        return f"your reply is {plural(words, 'word')}; the user asked for at least {limits['min_words']}. Expand it with useful detail (not filler) to at least {limits['min_words']} words."
     if limits.get("min_chars") and chars < limits["min_chars"]:
-        return f"your reply is {chars} characters; the user asked for at least {limits['min_chars']}. Expand it to at least {limits['min_chars']} characters."
+        return f"your reply is {plural(chars, 'character')}; the user asked for at least {limits['min_chars']}. Expand it to at least {limits['min_chars']} characters."
     return None
 
 
@@ -442,18 +446,18 @@ def check_input(prompt: str, limits: Dict[str, int]) -> Optional[str]:
         return None
     words, chars = count_words(prompt), len((prompt or "").strip())
     checks = [
-        ("max_words", words > limits.get("max_words", 10**12), f"{words} words; the limit is {limits.get('max_words')}", "input.max-words"),
+        ("max_words", words > limits.get("max_words", 10**12), f"{plural(words, 'word')}; the limit is {limits.get('max_words')}", "input.max-words"),
         (
             "max_chars",
             chars > limits.get("max_chars", 10**12),
-            f"{chars} characters; the limit is {limits.get('max_chars')}",
+            f"{plural(chars, 'character')}; the limit is {limits.get('max_chars')}",
             "input.max-chars",
         ),
-        ("min_words", words < limits.get("min_words", 0), f"{words} words; the minimum is {limits.get('min_words')}", "input.min-words"),
+        ("min_words", words < limits.get("min_words", 0), f"{plural(words, 'word')}; the minimum is {limits.get('min_words')}", "input.min-words"),
         (
             "min_chars",
             chars < limits.get("min_chars", 0),
-            f"{chars} characters; the minimum is {limits.get('min_chars')}",
+            f"{plural(chars, 'character')}; the minimum is {limits.get('min_chars')}",
             "input.min-chars",
         ),
     ]

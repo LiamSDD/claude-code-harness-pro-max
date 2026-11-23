@@ -90,7 +90,7 @@ class LimitEnforcementTests(ProjectTestCase):
         self.assertIn("characters; the limit is 20", out["reason"])
         self.assertIn("harness limits reset input.max-chars", out["reason"])
         _, out = self.hook("UserPromptSubmit", prompt="hi")
-        self.assertIn("minimum is 2", out["reason"])
+        self.assertIn("is 1 word; the minimum is 2", out["reason"])
         res, _ = self.hook("UserPromptSubmit", prompt="fix tests")
         self.assertEqual(res.stdout, "")
         res, _ = self.hook("UserPromptSubmit", prompt="/clear")
