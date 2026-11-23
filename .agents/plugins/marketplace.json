@@ -1,0 +1,20 @@
+{
+  "name": "harness-pro-max",
+  "interface": {
+    "displayName": "Claude Code Harness Pro Max"
+  },
+  "plugins": [
+    {
+      "name": "harness-pro-max",
+      "source": {
+        "source": "url",
+        "url": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

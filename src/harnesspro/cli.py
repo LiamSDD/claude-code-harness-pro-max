@@ -9,10 +9,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from . import __version__, cost, doctor, gitinfo, installer, tuning, vet
+from . import limits as limitlib
 from . import secrets as secretlib
 from . import skills as skilllib
 from .config import harness_dir, load_policy, project_dir
-from .hooks import dispatch
 from .policy import ALLOW, ASK, DENY, evaluate
 from .progress import Progress, ProgressError
 from .statusline import main_from_stdin
@@ -31,7 +31,9 @@ def _project(args: argparse.Namespace) -> str:
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
-    result = dispatch(args.event, sys.stdin.read())
+    from .platforms import run
+
+    result = run(args.platform, args.event, sys.stdin.read())
     if result.stdout:
         sys.stdout.write(result.stdout)
         if not result.stdout.endswith("\n"):
@@ -354,6 +356,59 @@ def cmd_upstream(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_limits(args: argparse.Namespace) -> int:
+    project = _project(args)
+    scope = "user" if args.user else "shared" if args.shared else "local"
+    try:
+        if args.action in (None, "show"):
+            rows = limitlib.table(project)
+            if args.json:
+                print(json.dumps(rows, indent=2))
+            else:
+                print(limitlib.render(rows, only_set=args.set_only))
+            return 0
+        if args.action == "set":
+            values = args.values
+            if len(values) % 2:
+                print("error: give pairs: harness limits set <limit> <value> [<limit> <value> ...]", file=sys.stderr)
+                return 2
+            changes = limitlib.set_limits(project, list(zip(values[::2], values[1::2])), scope)
+        elif args.action in ("output", "input"):
+            pairs = [
+                (f"{args.action}.{k}", v)
+                for k, v in (
+                    ("max-words", args.max_words),
+                    ("min-words", args.min_words),
+                    ("max-chars", args.max_chars),
+                    ("min-chars", args.min_chars),
+                )
+                if v is not None
+            ]
+            if args.action == "output" and args.max_tokens is not None:
+                pairs.append(("output.max-tokens", args.max_tokens))
+            if not pairs:
+                print(
+                    f"error: give at least one of --max-words --min-words --max-chars --min-chars{' --max-tokens' if args.action == 'output' else ''}",
+                    file=sys.stderr,
+                )
+                return 2
+            changes = limitlib.set_limits(project, pairs, scope)
+        else:
+            cleared = limitlib.reset_limits(project, args.values or ["all"], scope)
+            print("Reset to unlimited/default: " + (", ".join(cleared) if cleared else f"nothing was set in the {scope} scope"))
+            return 0
+    except (KeyError, ValueError) as exc:
+        print(f"error: {exc.args[0] if exc.args else exc}", file=sys.stderr)
+        return 2
+    print(f"Set ({scope}): " + ", ".join(changes))
+    env_based = [c for c in changes if limitlib.KNOBS[c.split(" = ")[0]].kind in ("env", "setting", "env+policy")]
+    if env_based:
+        print(
+            "Claude Code reads these at session start: begin a new session (or /clear) for them to apply. Hook-based limits apply immediately."
+        )
+    return 0
+
+
 def cmd_statusline(_args: argparse.Namespace) -> int:
     print(main_from_stdin(sys.stdin.read()))
     return 0
@@ -371,6 +426,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("hook", help="run a Claude Code hook (reads event JSON on stdin)")
     s.add_argument("event", metavar="event", help="hook event name, e.g. PreToolUse (unknown events are logged)")
+    s.add_argument("--platform", default="claude", help="claude (default), cursor, codex, gemini, antigravity, kimi, opencode, generic")
     s.set_defaults(func=cmd_hook)
 
     s = sub.add_parser("init", help="install the harness into a project")
@@ -465,6 +521,32 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--file", help="read the hooks reference from a file instead of the web")
     s.add_argument("--apply", action="store_true", help="register new events")
     s.set_defaults(func=cmd_upstream)
+
+    s = sub.add_parser("limits", help="set, show and reset output, input, effort, model, turn, budget and agent limits")
+    ls = s.add_subparsers(dest="action", metavar="<action>")
+    for name, helptext in (
+        ("show", "list every limit and its current value"),
+        ("set", "set one or more limits: <limit> <value> ..."),
+        ("reset", "remove limits: <limit>|output|input|subagents|all"),
+    ):
+        a = ls.add_parser(name, help=helptext)
+        a.add_argument("values", nargs="*")
+        a.add_argument("--shared", action="store_true", help="write to the committed project files")
+        a.add_argument("--user", action="store_true", help="write to your user-level files (all projects)")
+        a.add_argument("--json", action="store_true")
+        a.add_argument("--set-only", action="store_true", help="show only limits that are set")
+    for name in ("output", "input"):
+        a = ls.add_parser(name, help=f"shortcut for {name} length limits")
+        a.add_argument("--max-words")
+        a.add_argument("--min-words")
+        a.add_argument("--max-chars")
+        a.add_argument("--min-chars")
+        if name == "output":
+            a.add_argument("--max-tokens")
+        a.add_argument("--shared", action="store_true")
+        a.add_argument("--user", action="store_true")
+        a.set_defaults(values=[], json=False, set_only=False)
+    s.set_defaults(func=cmd_limits, values=[], shared=False, user=False, json=False, set_only=False)
 
     s = sub.add_parser("statusline", help="render the Claude Code status line (stdin JSON)")
     s.set_defaults(func=cmd_statusline)

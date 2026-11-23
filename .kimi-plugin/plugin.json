@@ -1,0 +1,40 @@
+{
+  "name": "harness-pro-max",
+  "version": "2.1.0",
+  "description": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
+  "author": {
+    "name": "priveight02",
+    "url": "https://github.com/priveight02"
+  },
+  "homepage": "https://github.com/priveight02/claude-code-harness-pro-max",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "guardrails",
+    "cost",
+    "tokens",
+    "limits",
+    "subagents",
+    "tdd",
+    "debugging",
+    "code-review",
+    "workflows"
+  ],
+  "skills": "./skills/",
+  "sessionStart": {
+    "skill": "using-harness-pro-max"
+  },
+  "skillInstructions": "Kimi Code tool mapping for Harness Pro Max skills: when a skill says to ask the user, use AskUserQuestion; to track tasks, use TodoList; to dispatch a subagent, use Agent with subagent_type coder (implementation and review), explore (read-only search) or plan (design); to invoke another skill, use Skill. Use Read, Write, Edit, Bash, Grep, Glob, FetchURL and WebSearch by their exposed names.",
+  "interface": {
+    "displayName": "Claude Code Harness Pro Max",
+    "shortDescription": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
+    "longDescription": "Harness Pro Max guides and guards agent work: brainstorming, plans, test-driven development, systematic debugging, agent teams, code review and release workflows, plus a shell-aware policy engine, token guards, output and input limits, budgets and cost analytics.",
+    "developerName": "priveight02",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/priveight02/claude-code-harness-pro-max"
+  }
+}

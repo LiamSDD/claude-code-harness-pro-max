@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "python3 ./bin/harness hook sessionStart --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "python3 ./bin/harness hook beforeSubmitPrompt --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "python3 ./bin/harness hook beforeShellExecution --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "python3 ./bin/harness hook beforeReadFile --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "python3 ./bin/harness hook beforeMCPExecution --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "python3 ./bin/harness hook afterFileEdit --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "stop": [
+      {
+        "command": "python3 ./bin/harness hook stop --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "python3 ./bin/harness hook sessionEnd --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "subagentStart": [
+      {
+        "command": "python3 ./bin/harness hook subagentStart --platform cursor",
+        "timeout": 15
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": "python3 ./bin/harness hook subagentStop --platform cursor",
+        "timeout": 15
+      }
+    ]
+  }
+}
