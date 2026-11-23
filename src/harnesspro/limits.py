@@ -446,14 +446,24 @@ def check_input(prompt: str, limits: Dict[str, int]) -> Optional[str]:
         return None
     words, chars = count_words(prompt), len((prompt or "").strip())
     checks = [
-        ("max_words", words > limits.get("max_words", 10**12), f"{plural(words, 'word')}; the limit is {limits.get('max_words')}", "input.max-words"),
+        (
+            "max_words",
+            words > limits.get("max_words", 10**12),
+            f"{plural(words, 'word')}; the limit is {limits.get('max_words')}",
+            "input.max-words",
+        ),
         (
             "max_chars",
             chars > limits.get("max_chars", 10**12),
             f"{plural(chars, 'character')}; the limit is {limits.get('max_chars')}",
             "input.max-chars",
         ),
-        ("min_words", words < limits.get("min_words", 0), f"{plural(words, 'word')}; the minimum is {limits.get('min_words')}", "input.min-words"),
+        (
+            "min_words",
+            words < limits.get("min_words", 0),
+            f"{plural(words, 'word')}; the minimum is {limits.get('min_words')}",
+            "input.min-words",
+        ),
         (
             "min_chars",
             chars < limits.get("min_chars", 0),
