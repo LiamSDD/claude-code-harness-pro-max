@@ -127,20 +127,20 @@ Recommendations (largest estimated saving first)
 ## How it works
 
 ```mermaid
-flowchart LR
-    U([You]) -->|prompt| P{{UserPromptSubmit}}
-    P -->|limits, secrets| C[Claude]
-    C -->|tool call| G{{PreToolUse}}
-    G -->|allow / ask / deny + reason| T[Tool runs]
-    T --> O{{PostToolUse}}
-    O -->|edits, reads, spend| S[(.claude/harness)]
-    C -->|"done"| X{{Stop}}
-    X -->|length, claims, tests| U
-    S -.->|next session| SS{{SessionStart}}
-    SS -.->|git state, next feature, notes| C
+flowchart TD
+    A([Your prompt]) --> B{{"UserPromptSubmit<br/>length limits · secrets"}}
+    B --> C[Claude]
+    C --> D{{"PreToolUse<br/>policy · token guards · budget · agent routing"}}
+    D -->|allow| E[Tool runs]
+    D -->|ask or deny, with a reason| C
+    E --> F{{"PostToolUse<br/>edits · reads · output size · spend"}}
+    F --> C
+    C --> G{{"Stop<br/>reply length · success claims · test gate"}}
+    G -->|passes| H([Reply])
+    G -->|sent back with the reason| C
 ```
 
-Every step is a Claude Code hook running `harness`. Decisions come back as structured JSON with a rule id and a reason, so Claude adjusts instead of retrying. Everything is recorded in a redacted, rotated audit log.
+Each diamond is a Claude Code hook running `harness`. Session start adds git state, the next feature and the last handoff note; compaction writes a checkpoint first. Decisions come back as structured JSON with a rule id and a reason, so Claude adjusts instead of retrying. Everything is recorded in a redacted, rotated audit log.
 
 ## What you get
 
