@@ -209,6 +209,77 @@ class StopGateTests(ProjectTestCase):
         self.assertIn("timed out", out["reason"])
 
 
+class ClaimCheckTests(ProjectTestCase):
+    def edit(self):
+        self.hook(
+            "PostToolUse",
+            tool_name="Edit",
+            tool_input={"file_path": self.path("app.py"), "old_string": "a", "new_string": "b"},
+            tool_response={},
+        )
+
+    def bash(self, command, failed=False):
+        if failed:
+            self.hook("PostToolUseFailure", tool_name="Bash", tool_input={"command": command}, error="Exit code 1")
+        else:
+            self.hook("PostToolUse", tool_name="Bash", tool_input={"command": command}, tool_response={"stdout": ""})
+
+    def test_claim_without_evidence_is_sent_back_once(self):
+        self.edit()
+        _, out = self.hook("Stop", last_assistant_message="Done! All tests pass now.")
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("All tests pass", out["reason"])
+        res, _ = self.hook("Stop", last_assistant_message="All tests pass.")
+        self.assertEqual(res.stdout, "")  # max_blocks reached
+
+    def test_claim_after_test_run_is_fine(self):
+        self.edit()
+        self.bash("python -m pytest -q")
+        res, _ = self.hook("Stop", last_assistant_message="All tests pass (42 passed).")
+        self.assertEqual(res.stdout, "")
+
+    def test_failed_test_run_is_not_evidence(self):
+        self.edit()
+        self.bash("npm test", failed=True)
+        _, out = self.hook("Stop", last_assistant_message="The bug is fixed.")
+        self.assertIn("npm test (failed)", out["reason"])
+
+    def test_edit_after_tests_needs_new_evidence(self):
+        self.bash("cargo test")
+        self.edit()
+        _, out = self.hook("Stop", last_assistant_message="Everything works.")
+        self.assertEqual(out["decision"], "block")
+
+    def test_no_claim_or_no_edits(self):
+        self.edit()
+        res, _ = self.hook("Stop", last_assistant_message="I changed app.py; I have not run the tests yet.")
+        self.assertEqual(res.stdout, "")
+        self.run_git("status")  # fresh state below
+        from agentharness.store import SessionState
+
+        SessionState(self.path(".claude", "harness"), "other").load()
+        res, _ = self.hook("Stop", session_id="other", last_assistant_message="All tests pass.")
+        self.assertEqual(res.stdout, "")
+
+    def test_disabled_and_custom_patterns(self):
+        self.write_policy({"verify_claims": {"test_commands": [r"^\./scripts/check\b"]}})
+        self.edit()
+        self.bash("./scripts/check --all")
+        res, _ = self.hook("Stop", last_assistant_message="All tests pass.")
+        self.assertEqual(res.stdout, "")
+        self.write_policy({"verify_claims": {"enabled": False}})
+        self.edit()
+        res, _ = self.hook("Stop", last_assistant_message="All tests pass.")
+        self.assertEqual(res.stdout, "")
+
+
+class SkillsContextTests(ProjectTestCase):
+    def test_session_start_lists_skills(self):
+        self.write(".claude/skills/my-skill/SKILL.md", "---\nname: my-skill\ndescription: Use when testing.\n---\n")
+        _, out = self.hook("SessionStart", source="startup")
+        self.assertIn("Skills: my-skill", out["hookSpecificOutput"]["additionalContext"])
+
+
 class LifecycleTests(ProjectTestCase):
     def test_pre_compact_writes_checkpoint(self):
         self.hook(

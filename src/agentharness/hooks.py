@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -34,6 +35,28 @@ from .store import AuditLog, SessionState
 
 EDIT_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PREFIX = "agent-harness"
+
+# Commands that count as verification evidence.
+TEST_COMMAND = re.compile(
+    r"(?x)(^|[\s;&|(])("
+    r"(python[0-9.]*\s+-m\s+)?(pytest|unittest|tox|nox)\b|"
+    r"(npm|pnpm|yarn|bun)\s+(run\s+)?(test|build|typecheck|lint|check)\b|"
+    r"npx\s+(jest|vitest|mocha|playwright|tsc|eslint)\b|(jest|vitest|mocha|tsc)\b|"
+    r"go\s+(test|build|vet)\b|cargo\s+(test|build|check|clippy)\b|"
+    r"make\s+(test|check|build|lint|ci)\b|mvn\b.*\b(test|verify)\b|(\./)?gradlew?\s+(test|build|check)\b|"
+    r"(bundle\s+exec\s+)?(rspec|rake\s+test)\b|phpunit\b|dotnet\s+(test|build)\b|mix\s+test\b|"
+    r"swift\s+(test|build)\b|xcodebuild\b.*\btest\b|deno\s+test\b|ruff\s+check\b|mypy\b|pyright\b"
+    r")"
+)
+
+# Phrases that claim the work is done or working.
+SUCCESS_CLAIM = re.compile(
+    r"(?i)\b(all (the )?tests (now )?pass(ing|es)?|tests? (are |now )*(passing|green)|"
+    r"(test )?suite (is )?(passing|green)|everything (works|passes|is working)|"
+    r"(it|this|that|the (bug|issue|problem|build)) (is|should be) (now )?(fixed|resolved|working)|"
+    r"(now )?works (now|correctly|as expected)|fixed the (bug|issue|problem)|"
+    r"build (passes|succeeds|is green)|ready to (merge|ship|deploy)|verified (that|it|the))\b"
+)
 
 
 @dataclass
@@ -166,6 +189,7 @@ def post_tool_use(h: Harness) -> HookResult:
     tool = h.payload.get("tool_name", "")
     tool_input = h.payload.get("tool_input") or {}
     path = _edited_path(tool_input) if tool in EDIT_TOOLS else None
+    command = str(tool_input.get("command", "")) if tool == "Bash" else ""
     with h.state.update() as st:
         st["tool_calls"] += 1
         if path:
@@ -173,6 +197,11 @@ def post_tool_use(h: Harness) -> HookResult:
             if rel and rel not in st["edited_files"]:
                 st["edited_files"] = (st["edited_files"] + [rel])[-200:]
             st["dirty_since_gate"] = True
+            st["verified_since_edit"] = False
+            st["claim_blocks"] = 0
+        elif command and is_verification(h, command):
+            st["verified_since_edit"] = True
+            st["last_verification"] = command[:200]
     response = h.payload.get("tool_response")
     extra: Dict[str, Any] = {}
     if isinstance(response, dict) and tool == "Bash":
@@ -193,10 +222,29 @@ def post_tool_use(h: Harness) -> HookResult:
     return HookResult()
 
 
+def is_verification(h: Harness, command: str) -> bool:
+    if TEST_COMMAND.search(command):
+        return True
+    gate = (h.policy.get("stop_gate.command") or "").strip()
+    if gate and gate in command:
+        return True
+    for pattern in h.policy.get("verify_claims.test_commands", []) or []:
+        try:
+            if re.search(pattern, command):
+                return True
+        except re.error:
+            continue
+    return False
+
+
 def post_tool_use_failure(h: Harness) -> HookResult:
     tool = h.payload.get("tool_name", "")
+    command = str((h.payload.get("tool_input") or {}).get("command", "")) if tool == "Bash" else ""
     with h.state.update() as st:
         st["failures"] += 1
+        if command and is_verification(h, command):
+            st["verified_since_edit"] = False  # a failing run is not evidence of success
+            st["last_verification"] = f"{command[:200]} (failed)"
     error = str(h.payload.get("error", "")).splitlines()[:1]
     h.log(
         "PostToolUseFailure",
@@ -280,10 +328,36 @@ def session_context(h: Harness) -> str:
         summary = Progress(h.dir).summary(max_chars=max(800, max_chars // 2))
         if summary:
             lines.append(summary)
+    if ctx.get("skills", True):
+        names = available_skill_names(h)
+        if names:
+            lines.append(
+                "Skills: " + ", ".join(names) + ". Before starting a task, check whether one applies "
+                "(using-agent-harness explains which to use when)."
+            )
     if h.policy.errors:
         lines.append("Policy problems (these layers were skipped): " + "; ".join(h.policy.errors))
     text = "\n".join(lines)
     return text if len(text) <= max_chars else text[: max_chars - 1] + "…"
+
+
+def available_skill_names(h: Harness) -> List[str]:
+    """Skill names the plugin or project provides, cheap to compute."""
+    roots = []
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if plugin_root:
+        roots.append(os.path.join(plugin_root, "src", "agentharness", "templates", "skills"))
+    roots.append(os.path.join(h.project, ".claude", "skills"))
+    names: List[str] = []
+    for root in roots:
+        try:
+            entries = sorted(os.listdir(root))
+        except OSError:
+            continue
+        for e in entries:
+            if os.path.isfile(os.path.join(root, e, "SKILL.md")) and e not in names:
+                names.append(e)
+    return names
 
 
 def session_start(h: Harness) -> HookResult:
@@ -302,14 +376,50 @@ def session_start(h: Harness) -> HookResult:
 # --------------------------------------------------------------------------
 
 
+def check_claims(h: Harness, st: Dict[str, Any]) -> Optional[HookResult]:
+    """verification-before-completion: a success claim needs fresh evidence."""
+    vc = h.policy.data.get("verify_claims", {})
+    if not vc.get("enabled", True) or not st.get("edited_files"):
+        return None
+    if st.get("verified_since_edit", True):
+        return None
+    message = str(h.payload.get("last_assistant_message") or "")
+    m = SUCCESS_CLAIM.search(message)
+    if not m:
+        return None
+    if st.get("claim_blocks", 0) >= int(vc.get("max_blocks", 1)):
+        return None
+    with h.state.update() as s:
+        s["claim_blocks"] = s.get("claim_blocks", 0) + 1
+    last = st.get("last_verification")
+    h.log("Stop", gate="claim without evidence", claim=m.group(0))
+    return _json(
+        {
+            "decision": "block",
+            "reason": (
+                f'{PREFIX}: you wrote "{m.group(0)}", but no test or build command has succeeded since your last edit'
+                + (f" (last run: `{last}`)" if last else "")
+                + ". Run the command that proves it, read the output, then report the actual result. "
+                "If you cannot run it, say so plainly instead of claiming success."
+            ),
+        }
+    )
+
+
 def stop(h: Harness) -> HookResult:
     gate = h.policy.data.get("stop_gate", {})
     command = (gate.get("command") or "").strip()
+    st = h.state.load()
     if not gate.get("enabled") or not command:
+        blocked = check_claims(h, st)
+        if blocked:
+            return blocked
         h.log("Stop")
         return HookResult()
-    st = h.state.load()
     if gate.get("only_if_edited", True) and not st.get("dirty_since_gate"):
+        blocked = check_claims(h, st)
+        if blocked:
+            return blocked
         h.log("Stop", gate="skipped (no edits since last pass)")
         return HookResult()
     timeout = int(gate.get("timeout", 300))
@@ -327,6 +437,8 @@ def stop(h: Harness) -> HookResult:
         if ok:
             s["dirty_since_gate"] = False
             s["stop_blocks"] = 0
+            s["verified_since_edit"] = True
+            s["last_verification"] = command[:200]
             blocks = 0
         else:
             s["stop_blocks"] = s.get("stop_blocks", 0) + 1

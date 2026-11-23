@@ -134,12 +134,18 @@
     "only_if_edited": true,
     "max_blocks": 3
   },
+  "verify_claims": {
+    "enabled": true,
+    "max_blocks": 1,
+    "test_commands": []
+  },
   "context": {
     "session_start": true,
     "git": true,
     "recent_commits": 5,
     "progress": true,
-    "max_chars": 6000
+    "max_chars": 6000,
+    "skills": true
   },
   "compaction": {
     "checkpoint": true,
@@ -153,6 +159,9 @@
   },
   "notify": {
     "enabled": false,
-    "on": ["permission_prompt", "idle_prompt"]
+    "on": [
+      "permission_prompt",
+      "idle_prompt"
+    ]
   }
 }
