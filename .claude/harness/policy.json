@@ -1,0 +1,18 @@
+{
+  "$comment": "Policy for developing agent-harness itself. Layers over src/agentharness/defaults/policy.json.",
+  "version": 1,
+  "mode": "enforce",
+  "stop_gate": {
+    "enabled": true,
+    "command": "python3 -m unittest discover -s tests -q",
+    "timeout": 180
+  },
+  "secrets": {
+    "ignore_paths": ["tests/**"]
+  },
+  "post_edit": {
+    "formatters": [
+      { "glob": "*.py", "command": "ruff format --quiet {file}" }
+    ]
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "id": 1,
+      "title": "Shell-aware policy engine for PreToolUse",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Chains, pipes, substitutions, heredocs and bash -c are analysed",
+        "harness check returns 0/3/2 for allow/ask/deny"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.424Z",
+      "updated_at": "2026-11-23T21:36:23.109Z"
+    },
+    {
+      "id": 2,
+      "title": "Secret protection on reads, writes, prompts and commands",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Provider tokens in Write/Edit content are denied",
+        "Audit log never contains a detected secret"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.522Z",
+      "updated_at": "2026-11-23T21:36:23.207Z"
+    },
+    {
+      "id": 3,
+      "title": "Verification gate on Stop",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Failing tests block Stop with the output",
+        "Released after max_blocks attempts"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.619Z",
+      "updated_at": "2026-11-23T21:36:23.306Z"
+    },
+    {
+      "id": 4,
+      "title": "Session memory: features, progress log, compaction checkpoints",
+      "status": "done",
+      "passes": true,
+      "priority": 2,
+      "steps": [
+        "SessionStart injects git state and the next feature",
+        "PreCompact appends a checkpoint"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.717Z",
+      "updated_at": "2026-11-23T21:36:23.402Z"
+    },
+    {
+      "id": 5,
+      "title": "harness init with profiles and idempotent settings merge",
+      "status": "done",
+      "passes": true,
+      "priority": 2,
+      "steps": [
+        "Second run changes nothing",
+        "Existing hooks and CLAUDE.md are kept"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.813Z",
+      "updated_at": "2026-11-23T21:36:23.500Z"
+    },
+    {
+      "id": 6,
+      "title": "harness doctor runs the configured hook for real",
+      "status": "done",
+      "passes": true,
+      "priority": 2,
+      "steps": [
+        "Fails when hooks are missing or broken"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:22.914Z",
+      "updated_at": "2026-11-23T21:36:23.598Z"
+    },
+    {
+      "id": 7,
+      "title": "Claude Code plugin and marketplace",
+      "status": "done",
+      "passes": true,
+      "priority": 2,
+      "steps": [
+        "plugin.json paths exist",
+        "bin/harness works without install"
+      ],
+      "notes": "covered by the unittest suite and the CI package job",
+      "created_at": "2026-11-23T21:36:23.012Z",
+      "updated_at": "2026-11-23T21:36:23.699Z"
+    },
+    {
+      "id": 8,
+      "title": "JSON Schema for policy files (editor autocomplete)",
+      "status": "todo",
+      "passes": false,
+      "priority": 2,
+      "steps": [
+        "schema/policy.schema.json generated from config.SCHEMA",
+        "harness init writes a $schema reference"
+      ],
+      "notes": "",
+      "created_at": "2026-11-23T21:36:23.807Z",
+      "updated_at": "2026-11-23T21:36:23.808Z"
+    },
+    {
+      "id": 9,
+      "title": "Windows support: PowerShell tool and CI on windows-latest",
+      "status": "todo",
+      "passes": false,
+      "priority": 2,
+      "steps": [
+        "PowerShell commands are analysed",
+        "Tests pass on windows-latest"
+      ],
+      "notes": "",
+      "created_at": "2026-11-23T21:36:23.929Z",
+      "updated_at": "2026-11-23T21:36:23.929Z"
+    },
+    {
+      "id": 10,
+      "title": "harness replay: re-evaluate an audit log against a new policy",
+      "status": "todo",
+      "passes": false,
+      "priority": 3,
+      "steps": [
+        "Shows decisions that would change before a policy edit is merged"
+      ],
+      "notes": "",
+      "created_at": "2026-11-23T21:36:24.031Z",
+      "updated_at": "2026-11-23T21:36:24.031Z"
+    },
+    {
+      "id": 11,
+      "title": "Handle PermissionDenied and PostToolBatch hook events",
+      "status": "todo",
+      "passes": false,
+      "priority": 3,
+      "steps": [
+        "Denials from Claude Code's own rules are logged with the rule that fired"
+      ],
+      "notes": "",
+      "created_at": "2026-11-23T21:36:24.132Z",
+      "updated_at": "2026-11-23T21:36:24.132Z"
+    },
+    {
+      "id": 12,
+      "title": "OpenTelemetry export of audit records",
+      "status": "todo",
+      "passes": false,
+      "priority": 3,
+      "steps": [
+        "OTLP/HTTP exporter behind an opt-in setting, no new dependency"
+      ],
+      "notes": "",
+      "created_at": "2026-11-23T21:36:24.230Z",
+      "updated_at": "2026-11-23T21:36:24.231Z"
+    }
+  ]
+}

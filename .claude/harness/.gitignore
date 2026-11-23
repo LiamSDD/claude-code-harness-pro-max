@@ -1,0 +1,7 @@
+# agent-harness: machine-local files
+audit.jsonl
+audit.jsonl.*
+state/
+*.lock
+*.tmp
+policy.local.json
