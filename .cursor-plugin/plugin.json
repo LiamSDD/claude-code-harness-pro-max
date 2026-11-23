@@ -2,7 +2,7 @@
   "name": "harness-pro-max",
   "displayName": "Claude Code Harness Pro Max",
   "description": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "author": {
     "name": "priveight02",
     "url": "https://github.com/priveight02"

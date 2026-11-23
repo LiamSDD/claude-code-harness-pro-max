@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harness-pro-max"
-version = "2.1.0"
+version = "2.1.1"
 description = "Claude Code Harness Pro Max: guardrails, token and cost control, multi-agent orchestration and verification for Claude Code"
 readme = "README.md"
 requires-python = ">=3.9"

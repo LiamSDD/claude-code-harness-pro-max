@@ -1,7 +1,7 @@
 {
   "name": "harness-pro-max",
   "displayName": "Claude Code Harness Pro Max",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Guardrails, token and cost control, limits, multi-agent workflows and verification for coding agents",
   "suggestedPrompts": [
     "Plan and build this feature with tests",
