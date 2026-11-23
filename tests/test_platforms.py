@@ -80,8 +80,9 @@ class ManifestTests(ProjectTestCase):
                 for key in ("skills", "hooks"):
                     if isinstance(m.get(key), str):
                         self.assertTrue(os.path.exists(os.path.join(ROOT, m[key])), m[key])
-        for agent in self.load(".claude-plugin/plugin.json")["agents"]:
-            self.assertTrue(os.path.isfile(os.path.join(ROOT, agent)), agent)
+        agents = sorted(f for f in os.listdir(os.path.join(ROOT, "agents")) if f.endswith(".md"))
+        self.assertEqual(len(agents), 7)
+        self.assertNotIn("agents", self.load(".claude-plugin/plugin.json"))
 
     def test_cursor_hooks_use_the_adapter(self):
         hooks = self.load("hooks/hooks-cursor.json")["hooks"]

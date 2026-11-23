@@ -2,7 +2,7 @@
   "name": "harness-pro-max",
   "displayName": "Claude Code Harness Pro Max",
   "version": "2.1.0",
-  "description": "Guardrails, token and cost control, multi-agent orchestration, memory and verification for Claude Code: a shell-aware policy engine, token-waste guards, subagent routing and limits, session budgets, cost analytics, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check, 7 subagents and 20 workflow skills.",
+  "description": "Guardrails, token and cost control, reply and prompt limits, multi-agent orchestration, memory and verification for Claude Code: a shell-aware policy engine, token-waste guards, subagent routing and limits, session budgets, cost analytics, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check, 7 subagents and 21 workflow skills.",
   "author": {
     "name": "priveight02"
   },
@@ -19,15 +19,6 @@
     "audit",
     "tdd",
     "workflows"
-  ],
-  "agents": [
-    "./agents/explorer.md",
-    "./agents/implementer.md",
-    "./agents/code-reviewer.md",
-    "./agents/test-runner.md",
-    "./agents/security-auditor.md",
-    "./agents/planner.md",
-    "./agents/evaluator.md"
   ],
   "icon": "./.claude-plugin/icon.png",
   "network": {
