@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Entry point used by the Claude Code plugin (no install needed).
+
+The plugin's bin/ directory is on the Bash tool's PATH, so Claude can also
+run `harness progress ...` and `harness check ...` directly.
+"""
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "src"))
+
+from agentharness.cli import main  # noqa: E402
+
+sys.exit(main())
