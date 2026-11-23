@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-harness"
-version = "1.0.0"
+version = "1.1.0"
 description = "Guardrails, memory and verification for Claude Code agents"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -39,7 +39,7 @@ Changelog = "https://github.com/priveight02/agent-harness/blob/main/CHANGELOG.md
 where = ["src"]
 
 [tool.setuptools.package-data]
-agentharness = ["defaults/*.json", "templates/*.md", "templates/agents/*.md", "templates/skills/*/SKILL.md"]
+agentharness = ["defaults/*.json", "templates/*.md", "templates/agents/*.md", "templates/skills/*/*.md"]
 
 [tool.ruff]
 line-length = 140

@@ -1,8 +1,8 @@
 {
   "name": "agent-harness",
   "displayName": "Agent Harness",
-  "version": "1.0.0",
-  "description": "Guardrails, memory and verification for Claude Code: a shell-aware policy engine, secret scanning, audit log, session handoff, a test gate before Claude stops, and reviewer/evaluator subagents.",
+  "version": "1.1.0",
+  "description": "Guardrails, memory, verification and engineering workflows for Claude Code: a shell-aware policy engine, secret scanning, skill and plugin vetting, audit log, session handoff, a test gate and claim check before Claude stops, six subagents and 18 skills (TDD, systematic debugging, plans, subagent-driven development, code review).",
   "author": {
     "name": "priveight02"
   },
@@ -17,6 +17,7 @@
     "policy"
   ],
   "agents": [
+    "./src/agentharness/templates/agents/implementer.md",
     "./src/agentharness/templates/agents/code-reviewer.md",
     "./src/agentharness/templates/agents/test-runner.md",
     "./src/agentharness/templates/agents/security-auditor.md",
