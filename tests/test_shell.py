@@ -88,6 +88,13 @@ class NestingTests(unittest.TestCase):
     def test_subshell_and_group(self):
         self.assertEqual(names("(cd x && make) && { echo a; echo b; }"), ["cd", "make", "echo", "echo"])
 
+    def test_double_bracket_test_is_one_command(self):
+        a = analyze('[[ "$x" =~ ^#!.*(bash|sh)$ ]] && echo shell')
+        self.assertEqual(a.names(), ["[[", "echo"])
+        self.assertIsNone(a.commands[1].piped_from)
+        b = analyze('[[ "$l" =~ ^#!.*[/[:space:]](bash|sh)([[:space:]]|$) ]]')
+        self.assertEqual(b.names(), ["[["])
+
     def test_comments_ignored(self):
         self.assertEqual(names("ls # rm -rf /"), ["ls"])
 

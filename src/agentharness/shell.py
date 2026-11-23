@@ -212,6 +212,17 @@ def _tokenize(s: str) -> List[_Token]:
     while i < n:
         c = s[i]
 
+        # [[ ... ]] is one test expression: |, &, < and > inside it are
+        # regex or comparison operators, not pipes or redirects.
+        if not buf and not has_word and s.startswith("[[", i) and i + 2 < n and s[i + 2] in " \t":
+            close = re.compile(r"\s\]\](?=\s|$|;|&|\||\))").search(s, i + 2)
+            j = close.start() + 1 if close else -1
+            if j > 0:
+                for word in s[i : j + 2].split():
+                    tokens.append(_Token(_WORD, word))
+                i = j + 2
+                continue
+
         # Comments start only at a word boundary.
         if c == "#" and not buf and not has_word:
             j = s.find("\n", i)
