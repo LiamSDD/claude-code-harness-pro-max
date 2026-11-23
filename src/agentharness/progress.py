@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -120,6 +121,45 @@ class Progress:
         out["total"] = len(feats)
         out["passing"] = sum(1 for f in feats if f.get("passes"))
         return out
+
+    # -- plans ------------------------------------------------------------
+
+    def import_plan(self, plan_path: str) -> List[Dict[str, Any]]:
+        """Add one feature per ``### Task N: Title`` heading in a plan.
+
+        Checkbox lines under a task (``- [ ] ...``) become its steps. Tasks
+        whose title already exists are skipped, so re-importing a plan after
+        editing it only adds the new tasks.
+        """
+        with open(plan_path, encoding="utf-8") as fh:
+            text = fh.read()
+        tasks: List[Dict[str, Any]] = []
+        current: Optional[Dict[str, Any]] = None
+        for line in text.splitlines():
+            m = re.match(r"^#{2,4}\s+Task\s+\d+[a-z]?\s*[:.\-\u2013\u2014]\s*(.+?)\s*$", line)
+            if m:
+                current = {"title": m.group(1).strip(), "steps": []}
+                tasks.append(current)
+                continue
+            if current is None:
+                continue
+            if re.match(r"^#{1,3}\s", line):  # a non-task heading ends the task
+                current = None
+                continue
+            step = re.match(r"^\s*[-*]\s+\[[ xX]\]\s+(.+)$", line)
+            if step:
+                label = re.sub(r"\*\*(.+?)\*\*", r"\1", step.group(1)).strip()
+                label = re.sub(r"^Step\s+\d+\s*:\s*", "", label)
+                current["steps"].append(label)
+        if not tasks:
+            raise ProgressError(f"no '### Task N: Title' headings found in {plan_path}")
+        existing = {f.get("title") for f in self.features()}
+        added = []
+        for t in tasks:
+            if t["title"] in existing:
+                continue
+            added.append(self.add(t["title"], steps=t["steps"][:20]))
+        return added
 
     # -- log --------------------------------------------------------------
 

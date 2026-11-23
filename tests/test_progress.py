@@ -66,6 +66,24 @@ class ProgressTests(ProjectTestCase):
         with self.assertRaises(ProgressError):
             self.p.note("")
 
+    def test_import_plan(self):
+        plan = self.write(
+            "docs/plans/p.md",
+            "# Plan\n\n## Global constraints\n- [ ] not a task step\n\n### Task 1: Rate-limit logins\n\n"
+            "- [ ] **Step 1: Write the failing test** for 6 attempts\n- [x] Step 2: Run it\n\n"
+            "### Task 2 - Lock accounts\n- [ ] Lock after 10 failures\n\n## Notes\n- [ ] ignored\n",
+        )
+        added = self.p.import_plan(plan)
+        self.assertEqual([f["title"] for f in added], ["Rate-limit logins", "Lock accounts"])
+        self.assertEqual(added[0]["steps"], ["Write the failing test for 6 attempts", "Run it"])
+        self.assertEqual(added[1]["steps"], ["Lock after 10 failures"])
+        self.assertEqual(self.p.import_plan(plan), [])  # idempotent
+
+    def test_import_plan_without_tasks(self):
+        plan = self.write("p.md", "# Nothing here\n")
+        with self.assertRaises(ProgressError):
+            self.p.import_plan(plan)
+
     def test_corrupt_file(self):
         self.write(".claude/harness/features.json", "[]")
         with self.assertRaises(ProgressError):

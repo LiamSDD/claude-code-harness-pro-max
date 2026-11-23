@@ -10,8 +10,9 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from . import __version__, doctor, gitinfo, installer
+from . import __version__, doctor, gitinfo, installer, vet
 from . import secrets as secretlib
+from . import skills as skilllib
 from .config import harness_dir, load_policy, project_dir
 from .hooks import HANDLERS, dispatch
 from .policy import ALLOW, ASK, DENY, evaluate
@@ -197,6 +198,11 @@ def cmd_progress(args: argparse.Namespace) -> int:
             print(f"noted in {os.path.relpath(prog.log_path, project)}")
         elif args.action == "summary":
             print(prog.summary() or "No progress recorded yet.")
+        elif args.action == "import":
+            added = prog.import_plan(args.plan)
+            for f in added:
+                print(f"added #{f['id']} {f['title']} ({len(f['steps'])} steps)")
+            print(f"{len(added)} task(s) imported from {args.plan}")
     except ProgressError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -245,6 +251,42 @@ def cmd_policy(args: argparse.Namespace) -> int:
             return 1
         print(f"ok: {len(policy.sources)} layer(s) valid")
     return 0
+
+
+def cmd_vet(args: argparse.Namespace) -> int:
+    if not os.path.exists(args.path):
+        print(f"error: {args.path} does not exist", file=sys.stderr)
+        return 2
+    result = vet.vet(args.path)
+    print(vet.to_json(result) if args.json else vet.render(result, show_info=args.info))
+    return vet.exit_code(result.findings, strict=args.strict)
+
+
+def cmd_skills(args: argparse.Namespace) -> int:
+    project = _project(args)
+    if args.action == "list":
+        found = skilllib.list_skills(project)
+        if args.json:
+            print(json.dumps([{"name": s.name, "source": s.source, "path": s.path, "description": s.description} for s in found], indent=2))
+            return 0
+        for s in found:
+            desc = s.description if len(s.description) <= 100 else s.description[:99] + "…"
+            print(f"  {s.source:<13} {s.name:<32} {desc}")
+        print(f"\n{len(found)} skill(s)")
+        return 0
+    paths = args.paths or [loc for _, loc in skilllib.default_locations(project)]
+    files = skilllib.find_skill_files(paths)
+    if os.path.isfile(os.path.join(project, "SKILL.md")) and not args.paths:
+        files.append(os.path.join(project, "SKILL.md"))
+    errors = warnings = 0
+    for f in files:
+        root_skill = os.path.dirname(f) == project
+        for issue in skilllib.check_skill(f, root_is_skill=root_skill):
+            print(issue.render(project))
+            errors += issue.severity == "error"
+            warnings += issue.severity == "warning"
+    print(f"\n{len(files)} skill(s) checked, {errors} error(s), {warnings} warning(s)")
+    return 1 if errors or (args.strict and warnings) else 0
 
 
 def cmd_statusline(_args: argparse.Namespace) -> int:
@@ -323,7 +365,23 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("text", nargs="+")
     a.add_argument("--heading")
     ps.add_parser("summary")
+    a = ps.add_parser("import", help="add one feature per '### Task N:' heading of a plan")
+    a.add_argument("plan")
     s.set_defaults(func=cmd_progress)
+
+    s = sub.add_parser("vet", help="security-scan a skill, plugin or repo before installing it")
+    s.add_argument("path")
+    s.add_argument("--strict", action="store_true", help="also fail on medium findings")
+    s.add_argument("--info", action="store_true", help="list informational findings (hooks, MCP servers)")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_vet)
+
+    s = sub.add_parser("skills", help="list or lint Claude Code skills")
+    s.add_argument("action", choices=["list", "check"])
+    s.add_argument("paths", nargs="*", help="for check: skill folders or SKILL.md files")
+    s.add_argument("--strict", action="store_true", help="fail on warnings too")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_skills)
 
     s = sub.add_parser("policy", help="inspect the effective policy")
     s.add_argument("action", choices=["show", "sources", "validate"])
