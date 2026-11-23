@@ -1,0 +1,29 @@
+{
+  "name": "agent-harness",
+  "displayName": "Agent Harness",
+  "version": "1.0.0",
+  "description": "Guardrails, memory and verification for Claude Code: a shell-aware policy engine, secret scanning, audit log, session handoff, a test gate before Claude stops, and reviewer/evaluator subagents.",
+  "author": {
+    "name": "priveight02"
+  },
+  "repository": "https://github.com/priveight02/agent-harness",
+  "license": "MIT",
+  "keywords": [
+    "guardrails",
+    "security",
+    "hooks",
+    "audit",
+    "long-running agents",
+    "policy"
+  ],
+  "agents": [
+    "./src/agentharness/templates/agents/code-reviewer.md",
+    "./src/agentharness/templates/agents/test-runner.md",
+    "./src/agentharness/templates/agents/security-auditor.md",
+    "./src/agentharness/templates/agents/planner.md",
+    "./src/agentharness/templates/agents/evaluator.md"
+  ],
+  "skills": [
+    "./src/agentharness/templates/skills/"
+  ]
+}
