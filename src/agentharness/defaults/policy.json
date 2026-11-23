@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "mode": "enforce",
+  "fail_mode": "open",
+  "disable": [],
+  "bash": {
+    "on_parse_error": "ask",
+    "sudo": "ask",
+    "rules": []
+  },
+  "paths": {
+    "deny_read": [
+      ".env",
+      ".env.*",
+      "!.env.example",
+      "!.env.sample",
+      "!.env.template",
+      "!.env.defaults",
+      "*.pem",
+      "*.key",
+      "*.p12",
+      "*.pfx",
+      "*.keystore",
+      "*.jks",
+      "id_rsa*",
+      "id_dsa*",
+      "id_ecdsa*",
+      "id_ed25519*",
+      "!*.pub",
+      "**/.ssh/**",
+      "!**/.ssh/*.pub",
+      "!**/.ssh/known_hosts",
+      "!**/.ssh/config",
+      "**/.aws/credentials",
+      "**/.config/gcloud/**",
+      "**/.azure/**",
+      "**/.kube/config",
+      "**/.docker/config.json",
+      ".netrc",
+      ".git-credentials",
+      ".pgpass",
+      "*.tfstate",
+      "*.tfstate.backup",
+      "**/secrets/**",
+      "credentials.json",
+      "service-account*.json"
+    ],
+    "deny_write": [
+      "**/.git/**",
+      "**/.ssh/**",
+      "**/.aws/**",
+      ".git-credentials",
+      ".netrc",
+      "*.pem",
+      "*.key",
+      "id_rsa*",
+      "id_ed25519*"
+    ],
+    "ask_write": [
+      ".env",
+      ".env.*",
+      "!.env.example",
+      "!.env.sample",
+      "!.env.template",
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "bun.lockb",
+      "poetry.lock",
+      "uv.lock",
+      "Cargo.lock",
+      "Gemfile.lock",
+      "composer.lock",
+      "go.sum",
+      ".github/workflows/**",
+      ".claude/settings.json",
+      ".claude/harness/policy.json"
+    ],
+    "write_outside_project": "ask",
+    "write_allow_outside": [
+      "/tmp/**",
+      "/private/tmp/**",
+      "/private/var/folders/**",
+      "/var/folders/**",
+      "~/.claude/projects/**"
+    ]
+  },
+  "secrets": {
+    "scan_writes": true,
+    "scan_prompts": "warn",
+    "scan_commands": "ask",
+    "allow_patterns": [],
+    "ignore_paths": []
+  },
+  "web": {
+    "allow_domains": [],
+    "ask_domains": [
+      "pastebin.com",
+      "paste.ee",
+      "hastebin.com",
+      "transfer.sh",
+      "file.io",
+      "0x0.st",
+      "webhook.site",
+      "requestbin.com",
+      "pipedream.net",
+      "ngrok.io",
+      "ngrok-free.app",
+      "interact.sh",
+      "oast.fun",
+      "burpcollaborator.net"
+    ],
+    "deny_domains": []
+  },
+  "mcp": {
+    "deny_tools": [],
+    "ask_tools": [
+      "mcp__*__delete*",
+      "mcp__*__drop*",
+      "mcp__*__destroy*",
+      "mcp__*__purge*",
+      "mcp__*__remove_repo*",
+      "mcp__*__force_push*"
+    ]
+  },
+  "post_edit": {
+    "formatters": [],
+    "timeout": 30
+  },
+  "stop_gate": {
+    "enabled": false,
+    "command": "",
+    "timeout": 300,
+    "only_if_edited": true,
+    "max_blocks": 3
+  },
+  "context": {
+    "session_start": true,
+    "git": true,
+    "recent_commits": 5,
+    "progress": true,
+    "max_chars": 6000
+  },
+  "compaction": {
+    "checkpoint": true,
+    "instructions": "Preserve: the current task and its acceptance criteria, files changed so far, failing tests and their errors, decisions made and why, and the next concrete step."
+  },
+  "audit": {
+    "enabled": true,
+    "path": ".claude/harness/audit.jsonl",
+    "max_bytes": 5000000,
+    "keep": 3
+  },
+  "notify": {
+    "enabled": false,
+    "on": ["permission_prompt", "idle_prompt"]
+  }
+}
