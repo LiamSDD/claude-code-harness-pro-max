@@ -116,6 +116,16 @@ Gitignore-style patterns, last match wins:
 | `only_if_edited` | `true` | skip when no file was edited since the last pass |
 | `max_blocks` | `3` | after this many consecutive failures Claude may stop, and you are told |
 
+### `verify_claims`
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `true` | check Claude's final message when it stops |
+| `max_blocks` | `1` | how many times per edit cycle Claude is sent back |
+| `test_commands` | `[]` | extra regexes for commands that count as verification |
+
+When Claude stops after editing files and its last message claims success ("all tests pass", "fixed the bug", "ready to merge" ...), the harness checks that a test, build, lint or type-check command succeeded after the last edit. Recognised commands include pytest, unittest, npm/pnpm/yarn/bun test and build, jest, vitest, tsc, go test, cargo test, make test, gradle, mvn, rspec, phpunit, dotnet test, ruff and mypy, plus the stop gate command. A failed run does not count.
+
 ### `post_edit`
 
 ```json
@@ -137,6 +147,7 @@ Gitignore-style patterns, last match wins:
 | --- | --- |
 | `context.session_start`, `context.git`, `context.progress` | `true` |
 | `context.recent_commits` | `5` |
+| `context.skills` | `true`: list available skills at session start |
 | `context.max_chars` | `6000` |
 | `compaction.checkpoint` | `true`: append a checkpoint to `progress.md` before compaction |
 | `compaction.instructions` | what the compacted summary must keep |

@@ -47,6 +47,8 @@ sequenceDiagram
 | `gitinfo.py` | Branch, ahead/behind, changes, recent commits |
 | `installer.py` / `settings_merge.py` | `harness init`: profiles, test-command detection, idempotent merge |
 | `doctor.py` | Checks that run the configured hook for real |
+| `vet.py` | Supply-chain scanner for skills, plugins and repositories |
+| `skills.py` | Skill discovery, frontmatter parser and linter |
 | `statusline.py` | Status line renderer |
 
 ## Why a parser and not regexes
@@ -60,6 +62,11 @@ Following Anthropic's published harness patterns:
 - **Initializer and worker roles.** The `planner` subagent turns a request into `features.json` with acceptance steps; later sessions work through it one feature at a time (`feature-loop` skill).
 - **Structured handoff artifacts.** `features.json` (machine-readable, with a `passes` flag), `progress.md` (append-only narrative) and git history. `SessionStart` injects a summary; `PreCompact` writes a checkpoint so compaction does not lose track of edited files.
 - **Separate evaluation.** Self-evaluation is unreliable, so the `evaluator` subagent verifies each feature by exercising it, and the `Stop` gate runs the test suite.
+- **Evidence before claims.** The `Stop` claim check turns the `verification-before-completion` skill from advice into a check: a success claim after edits needs a successful test or build since the last edit.
+
+## Workflows on top of guardrails
+
+Hooks constrain what the agent can do; skills shape how it works. The skills are written as calm, specific procedures rather than all-caps commands: agents follow rules they understand, and forceful imperative text is also what injection scanners (including `harness vet`) look for. They are connected to the harness: `writing-plans` output imports into `features.json`, `subagent-driven-development` uses the `implementer`, `code-reviewer` and `evaluator` subagents, and progress notes record rulings so decisions survive compaction.
 
 ## Performance
 

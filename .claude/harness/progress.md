@@ -9,3 +9,11 @@ First release. Policy engine with 27 rules and a shell parser, 24 secret detecto
 Decisions: no runtime dependencies (hook latency ~90 ms); decisions returned as JSON, never exit 2; fail open by default; unparseable commands ask.
 
 Next: #8 JSON Schema for policy files, then #9 Windows support.
+
+### 2026-11-23 23:09 · v1.1.0
+
+Adapted the engineering workflows from obra/superpowers (MIT) after vetting it: no malicious content; the only high finding was a design doc that symlinks git hooks between worktrees. Rewrote the skills in calm, specific language and connected them to the harness (plan import, implementer/reviewer/evaluator subagents, rulings in the progress log).
+
+New enforcement: harness vet (supply chain), skills check (lint), and the Stop claim check. While building vet it caught invisible characters that an editing tool had written into vet.py itself; the source is now ASCII-escaped and a test guards it.
+
+Next: #8 JSON Schema for policy files.

@@ -164,6 +164,61 @@
       "notes": "",
       "created_at": "2026-11-23T21:36:24.230Z",
       "updated_at": "2026-11-23T21:36:24.231Z"
+    },
+    {
+      "id": 13,
+      "title": "harness vet: supply-chain scanner for skills and plugins",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Detects hidden Unicode, injection, dangerous shell, payloads, secrets, escaping symlinks",
+        "Repository vets with 0 high findings in CI"
+      ],
+      "notes": "covered by the unittest suite (190 tests) and make check",
+      "created_at": "2026-11-23T22:09:15.004Z",
+      "updated_at": "2026-11-23T22:09:15.438Z"
+    },
+    {
+      "id": 14,
+      "title": "Engineering workflow skills (TDD, debugging, plans, subagent execution, review)",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "18 skills lint clean",
+        "init copies skills with their reference files"
+      ],
+      "notes": "covered by the unittest suite (190 tests) and make check",
+      "created_at": "2026-11-23T22:09:15.117Z",
+      "updated_at": "2026-11-23T22:09:15.547Z"
+    },
+    {
+      "id": 15,
+      "title": "Claim check: success claims need fresh verification",
+      "status": "done",
+      "passes": true,
+      "priority": 1,
+      "steps": [
+        "Claim after edits without a passing test run is sent back once"
+      ],
+      "notes": "covered by the unittest suite (190 tests) and make check",
+      "created_at": "2026-11-23T22:09:15.225Z",
+      "updated_at": "2026-11-23T22:09:15.654Z"
+    },
+    {
+      "id": 16,
+      "title": "Plan import and standalone skill packaging",
+      "status": "done",
+      "passes": true,
+      "priority": 2,
+      "steps": [
+        "progress import is idempotent",
+        "Root SKILL.md lints clean"
+      ],
+      "notes": "covered by the unittest suite (190 tests) and make check",
+      "created_at": "2026-11-23T22:09:15.331Z",
+      "updated_at": "2026-11-23T22:09:15.762Z"
     }
   ]
 }

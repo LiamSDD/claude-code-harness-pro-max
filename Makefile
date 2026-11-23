@@ -23,6 +23,8 @@ build:
 check: lint test
 	./bin/harness policy validate
 	./bin/harness scan --high-only src hooks .claude-plugin
+	./bin/harness skills check src/agentharness/templates/skills SKILL.md
+	./bin/harness vet .
 
 clean:
 	rm -rf build dist *.egg-info .coverage htmlcov .ruff_cache

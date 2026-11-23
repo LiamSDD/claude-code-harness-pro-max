@@ -15,7 +15,8 @@ Guardrails, memory and verification for Claude Code, written in standard-library
 - `src/agentharness/policy.py`: rules. Each rule has a stable id; never rename one.
 - `src/agentharness/hooks.py`: one handler per hook event; output must follow the Claude Code hook contract.
 - `src/agentharness/defaults/policy.json`: built-in policy. Validate with `./bin/harness policy validate`.
-- `src/agentharness/templates/`: CLAUDE.md template, subagents and skills shipped with the plugin and `harness init`.
+- `src/agentharness/templates/`: CLAUDE.md template, subagents and skills shipped with the plugin and `harness init`. Lint with `./bin/harness skills check src/agentharness/templates/skills`.
+- `src/agentharness/vet.py`: supply-chain scanner. `./bin/harness vet .` must report 0 high findings.
 
 ## Rules
 
