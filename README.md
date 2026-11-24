@@ -343,6 +343,13 @@ No telemetry. Everything stays in `.claude/harness/` in your project. The only n
 No. It checks every tool call, but code Claude writes and later runs is outside its view. For untrusted work, combine it with Claude Code's sandbox or a container. See [SECURITY.md](SECURITY.md).
 </details>
 
+## Companion tools
+
+| Tool | What it adds |
+| --- | --- |
+| [claude-ledger](https://github.com/LiamSDD/claude-ledger) | Standalone spend report across your whole Claude Code history: by model, project, day, session and subagent, with Markdown, JSON and CSV output. `harness cost` covers the current project; claude-ledger covers everything, and works without the harness installed. |
+| [pixelpath](https://github.com/LiamSDD/pixelpath) | Zero-dependency SVG to PNG rasterizer, handy for generating icons and README images inside agent workflows without native libraries. |
+
 ## Development
 
 ```bash
