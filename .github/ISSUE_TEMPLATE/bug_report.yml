@@ -1,0 +1,70 @@
+name: Bug report
+description: A decision was wrong, a hook failed, or a command misbehaved.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. A command that bypasses a deny rule is a security issue: report it privately through the Security tab (see SECURITY.md), not here.
+        If the harness blocked or asked about something safe, use the **False positive** template instead.
+        Never paste real credentials, tokens or private file contents.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The smallest command or tool input that shows the problem, with its output. `harness check` reproduces most policy decisions without Claude Code.
+      render: bash
+      placeholder: |
+        harness --version
+        harness check bash "<command>" --json   # or read / write / url / tool
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected decision and why
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Harness version
+      description: Output of `harness --version`.
+      placeholder: Claude Code Harness Pro Max 2.1.2
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed as
+      options:
+        - Claude Code plugin
+        - harness init in a project
+        - Codex, Cursor, Gemini CLI, Antigravity or Kimi package
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Python version and agent version (for example Claude Code 2.x).
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I have not included real credentials or private data.
+          required: true

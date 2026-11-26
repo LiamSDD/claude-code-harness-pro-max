@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new guardrail, limit, skill, command or platform integration.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The harness has no runtime dependencies and supports Python 3.9 to 3.13, because hooks start a fresh interpreter on every tool call. Open-ended ideas can start in [Discussions → Ideas](https://github.com/LiamSDD/claude-code-harness-pro-max/discussions/categories/ideas); use this form for a concrete proposal.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What goes wrong or costs too much today, and in which agent (Claude Code, Codex, Cursor, Gemini CLI, Antigravity, Kimi)?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The rule, limit, command or skill you have in mind. For a new rule, give an example it must catch and an everyday command it must still allow.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: For example a user policy override, an existing limit or a Claude Code setting.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and discussions and this has not been proposed.
+          required: true
+        - label: I am willing to open a pull request for this.
+          required: false

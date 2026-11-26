@@ -19,8 +19,12 @@ For untrusted repositories or fully autonomous runs, combine it with Claude Code
 - Logs never contain file contents, and anything matching a secret detector is redacted before it is written.
 - The policy files and `.claude/settings.json` are on the ask-before-writing list, so the agent cannot quietly loosen its own guardrails.
 
+## Supported versions
+
+Only the latest release (currently 2.1.x) receives fixes. Fixes ship as a new patch release.
+
 ## Reporting a vulnerability
 
-Please do not open a public issue. Use GitHub's private vulnerability reporting for this repository (Security → Report a vulnerability). Include a command or tool input that bypasses a rule, the expected and actual decision, and the output of `harness --version`.
+Please do not open a public issue. Use GitHub's [private vulnerability reporting](https://github.com/LiamSDD/claude-code-harness-pro-max/security/advisories/new) for this repository (Security → Report a vulnerability); there is no email contact. Include a command or tool input that bypasses a rule, the expected and actual decision, and the output of `harness --version`.
 
 Bypasses of a deny rule are treated as security bugs and fixed in a patch release with a regression test.
