@@ -109,6 +109,26 @@ class CliTests(ProjectTestCase):
             self.assertIn(piece, out)
         self.assertEqual(self.cli("statusline", stdin="garbage").returncode, 0)
 
+    def test_every_cli_option_has_help_string(self):
+        import argparse
+        from harnesspro.cli import build_parser
+
+        missing = []
+
+        def walk(parser, path):
+            for action in parser._actions:
+                if action.option_strings:
+                    if any(opt in ("-h", "--help", "--version") for opt in action.option_strings):
+                        continue
+                    if not (action.help and action.help.strip()):
+                        missing.append(f"{path}: {'/'.join(action.option_strings)}")
+                if isinstance(action, argparse._SubParsersAction):
+                    for name, sub in action.choices.items():
+                        walk(sub, f"{path} {name}")
+
+        walk(build_parser(), "harness")
+        self.assertEqual(missing, [], f"CLI options missing help=: {missing}")
+
 
 if __name__ == "__main__":
     unittest.main()

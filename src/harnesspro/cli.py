@@ -430,56 +430,67 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_hook)
 
     s = sub.add_parser("init", help="install the harness into a project")
-    s.add_argument("--profile", choices=installer.PROFILES, default="standard")
+    s.add_argument(
+        "--profile",
+        choices=installer.PROFILES,
+        default="standard",
+        help=f"policy profile ({', '.join(installer.PROFILES)}; default: standard)",
+    )
     s.add_argument("--hook-command", help="command hooks call (default: harness if on PATH)")
     s.add_argument("--no-agents", action="store_true", help="do not copy subagents and skills")
     s.add_argument("--force", action="store_true", help="overwrite non-hook settings such as statusLine")
-    s.add_argument("--dry-run", action="store_true")
+    s.add_argument("--dry-run", action="store_true", help="preview changes without writing files")
     s.set_defaults(func=cmd_init)
 
     s = sub.add_parser("doctor", help="verify the installation")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_doctor)
 
     s = sub.add_parser("check", help="dry-run the policy (exit 0 allow, 2 deny, 3 ask)")
     s.add_argument("kind", choices=["bash", "read", "write", "url", "tool"])
     s.add_argument("value", nargs="+")
     s.add_argument("--stdin", action="store_true", help="for write: read the new content from stdin")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_check)
 
     s = sub.add_parser("scan", help="scan files for secrets (exit 1 on findings)")
     s.add_argument("paths", nargs="*")
     s.add_argument("--staged", action="store_true", help="scan files staged in git (pre-commit)")
     s.add_argument("--high-only", action="store_true", help="only provider-specific detectors")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_scan)
 
     s = sub.add_parser("audit", help="read the audit log")
     s.add_argument("--tail", type=int, default=30, help="last N records (0 = all)")
     s.add_argument("--session", help="filter by session id prefix")
     s.add_argument("--blocked", action="store_true", help="only denied, asked or blocked actions")
-    s.add_argument("--stats", action="store_true")
+    s.add_argument("--stats", action="store_true", help="show summary counts instead of individual records")
     s.add_argument("--all", action="store_true", help="include rotated logs")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_audit)
 
     s = sub.add_parser("progress", help="feature list and handoff log for long-running work")
     ps = s.add_subparsers(dest="action", metavar="<action>")
     ps.required = True
     a = ps.add_parser("show")
-    a.add_argument("--json", action="store_true")
+    a.add_argument("--json", action="store_true", help="emit JSON output")
     a = ps.add_parser("add")
     a.add_argument("text", nargs="+")
     a.add_argument("--step", action="append", help="acceptance step (repeatable)")
-    a.add_argument("--priority", type=int, default=2, choices=[1, 2, 3])
+    a.add_argument(
+        "--priority",
+        type=int,
+        default=2,
+        choices=[1, 2, 3],
+        help="feature priority: 1 (high), 2 (normal, default), 3 (low)",
+    )
     for name in ("start", "done", "block", "reopen"):
         a = ps.add_parser(name)
         a.add_argument("id", type=int)
         a.add_argument("note", nargs="*")
     a = ps.add_parser("note")
     a.add_argument("text", nargs="+")
-    a.add_argument("--heading")
+    a.add_argument("--heading", help="optional section heading for the handoff note")
     ps.add_parser("summary")
     a = ps.add_parser("import", help="add one feature per '### Task N:' heading of a plan")
     a.add_argument("plan")
@@ -489,14 +500,14 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("path")
     s.add_argument("--strict", action="store_true", help="also fail on medium findings")
     s.add_argument("--info", action="store_true", help="list informational findings (hooks, MCP servers)")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_vet)
 
     s = sub.add_parser("skills", help="list or lint Claude Code skills")
     s.add_argument("action", choices=["list", "check"])
     s.add_argument("paths", nargs="*", help="for check: skill folders or SKILL.md files")
     s.add_argument("--strict", action="store_true", help="fail on warnings too")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_skills)
 
     s = sub.add_parser("policy", help="inspect the effective policy")
@@ -508,11 +519,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--since", help="only transcripts modified within 24h, 7d, 4w ...")
     s.add_argument("--all", action="store_true", help="every project on this machine")
     s.add_argument("--top", type=int, default=5, help="sessions to list")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help="emit JSON output")
     s.set_defaults(func=cmd_cost)
 
     s = sub.add_parser("optimize", help="apply token-saving Claude Code settings and harness limits")
-    s.add_argument("--profile", choices=sorted(tuning.PROFILES), default="balanced")
+    s.add_argument(
+        "--profile",
+        choices=sorted(tuning.PROFILES),
+        default="balanced",
+        help=f"optimization profile ({', '.join(sorted(tuning.PROFILES))}; default: balanced)",
+    )
     s.add_argument("--budget", type=float, help="session budget in USD (ask before tools once reached)")
     s.add_argument("--apply", action="store_true", help="write the changes (default: show them)")
     s.set_defaults(func=cmd_optimize)
@@ -533,18 +549,18 @@ def build_parser() -> argparse.ArgumentParser:
         a.add_argument("values", nargs="*")
         a.add_argument("--shared", action="store_true", help="write to the committed project files")
         a.add_argument("--user", action="store_true", help="write to your user-level files (all projects)")
-        a.add_argument("--json", action="store_true")
+        a.add_argument("--json", action="store_true", help="emit JSON output")
         a.add_argument("--set-only", action="store_true", help="show only limits that are set")
     for name in ("output", "input"):
         a = ls.add_parser(name, help=f"shortcut for {name} length limits")
-        a.add_argument("--max-words")
-        a.add_argument("--min-words")
-        a.add_argument("--max-chars")
-        a.add_argument("--min-chars")
+        a.add_argument("--max-words", help="maximum words allowed")
+        a.add_argument("--min-words", help="minimum words required")
+        a.add_argument("--max-chars", help="maximum characters allowed")
+        a.add_argument("--min-chars", help="minimum characters required")
         if name == "output":
-            a.add_argument("--max-tokens")
-        a.add_argument("--shared", action="store_true")
-        a.add_argument("--user", action="store_true")
+            a.add_argument("--max-tokens", help="maximum output tokens allowed")
+        a.add_argument("--shared", action="store_true", help="write to the committed project files")
+        a.add_argument("--user", action="store_true", help="write to your user-level files (all projects)")
         a.set_defaults(values=[], json=False, set_only=False)
     s.set_defaults(func=cmd_limits, values=[], shared=False, user=False, json=False, set_only=False)
 

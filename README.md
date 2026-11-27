@@ -176,7 +176,7 @@ flowchart TD
 | `harness check bash\|read\|write\|url\|tool <value>` | Dry-run a decision. Exit 0 allow, 3 ask, 2 deny |
 | `harness scan [paths] [--staged]` | Find credentials; use `--staged` as a pre-commit check |
 | `harness vet <path>` | Review a skill, plugin or repo before installing it |
-| `harness audit [--blocked] [--stats]` | Read the audit log |
+| `harness audit [--blocked] [--stats] [--tail N] [--session ID] [--all] [--json]` | Read the audit log |
 | `harness policy show\|sources\|validate` | Inspect the effective policy |
 
 **Workflow and maintenance**
