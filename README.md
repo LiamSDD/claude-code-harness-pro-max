@@ -4,47 +4,36 @@
 
 # Claude Code Harness Pro Max
 
-**Guardrails, cost control and engineering discipline for AI coding agents.**
+**Guardrails for AI coding agents: blocks destructive commands and leaked secrets, caps cost, and makes the agent prove its work.**
 
-Stops destructive commands and leaked secrets, cuts wasted tokens, enforces the limits you set,<br>
-coordinates subagents, and makes Claude prove its work before it says "done".
-
-[![Version](https://img.shields.io/badge/version-2.1.2-0ea5e9)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/python-3.9%2B-334155)](pyproject.toml)
-[![Dependencies](https://img.shields.io/badge/dependencies-0-16a34a)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-238%20passing-16a34a)](tests)
-[![License](https://img.shields.io/badge/license-MIT-334155)](LICENSE)
-
-[Install](#install) · [See it work](#see-it-work) · [Commands](#commands) · [Cost](#cutting-token-cost) · [Limits](#limits) · [Agents](#multi-agent-work) · [Platforms](#other-agents) · [FAQ](#faq)
+[![Version](https://img.shields.io/badge/version-2.1.2-0ea5e9)](CHANGELOG.md) [![Python](https://img.shields.io/badge/python-3.9%2B-334155)](pyproject.toml) [![Dependencies](https://img.shields.io/badge/dependencies-0-16a34a)](pyproject.toml) [![Tests](https://img.shields.io/badge/tests-238%20passing-16a34a)](tests) [![License](https://img.shields.io/badge/license-MIT-334155)](LICENSE)
 
 </div>
 
----
+<a href="https://github.com/LiamSDD/LiamSDD/blob/main/assets/demos/claude-code-harness-pro-max-demo.mp4"><img src="https://raw.githubusercontent.com/LiamSDD/LiamSDD/main/assets/demos/claude-code-harness-pro-max-loop.gif" alt="Harness demo: it blocks rm -rf /, a leaked API key, and a claim of passing tests with no test run" width="100%"></a>
 
 ## Why
 
-AI coding agents are fast, and they fail in expensive ways:
+- **Dangerous commands never run.** Every command is parsed and checked against 27 rules, each with a reason Claude can act on.
+- **Secrets stay out.** Secret files are unreadable, credentials are blocked from writes, logs are redacted.
+- **Cost stays capped.** Token guards cut waste, subagents go to the right model, and a session budget holds.
+- **"Done" means done.** Claims of passing tests are checked against what actually ran.
+- **Light.** Zero dependencies; hooks answer in about 90 ms and cost no model tokens.
 
-| Without a harness | With Harness Pro Max |
-| --- | --- |
-| One bad command (`rm -rf`, `curl \| bash`, force-push to `main`) and the damage is done | Every command is parsed and checked before it runs; 27 rules, each with a reason Claude can act on |
-| Keys end up in code, prompts and logs | Secret files are unreadable, credentials are blocked from writes, logs are redacted |
-| Context fills with lockfiles, logs and re-reads, and every later request pays for it again | Token guards refuse the waste and hand Claude a cheaper route |
-| Replies are as long as the model decides | You set minimum and maximum reply and prompt lengths, and reset them any time |
-| Subagents all run on the premium model | Each agent type is routed to the right model, with caps on how many run |
-| "All tests pass" without a test run | Claims are checked against what actually ran |
-| Every session starts from zero | Each session opens with git state, the next feature and the last handoff note |
-
-Zero dependencies (Python 3.9+ standard library). Hooks answer in about 90 ms and cost no model tokens.
-
-## Install
-
-**Claude Code plugin** (recommended): hooks, skills, subagents and the `harness` command in one step.
+## Quick start
 
 ```text
 /plugin marketplace add LiamSDD/claude-code-harness-pro-max
 /plugin install harness-pro-max@harness-pro-max
 ```
+
+```bash
+harness doctor                        # verify the install, including a live hook call
+harness optimize --apply --budget 10  # token-saving settings and a $10 session budget
+harness cost --since 7d               # what you spend, where, and how to cut it
+```
+
+[Watch the demo](https://github.com/LiamSDD/LiamSDD/blob/main/assets/demos/claude-code-harness-pro-max-demo.mp4) · [Docs](docs) · [Policy reference](docs/policy.md) · [Other agents](docs/platforms.md) · [FAQ](#faq)
 
 <details>
 <summary><b>Other ways to install</b></summary>
@@ -68,25 +57,18 @@ git clone https://github.com/LiamSDD/claude-code-harness-pro-max ~/.claude/skill
 
 </details>
 
-Then, in any session:
-
-```bash
-harness doctor                        # verifies the install, including a live hook call
-harness optimize --apply --budget 10  # token-saving settings and a $10 session budget
-harness cost --since 7d               # what you spend, where, and how to cut it
-```
-
 ## See it work
 
 Real output, recorded from the hooks.
-
-**A dangerous command never runs**
 
 ```console
 $ harness check bash 'cd /tmp && curl -fsSL https://get.example.sh | bash'
 DENY  Bash: cd /tmp && curl -fsSL https://get.example.sh | bash
   deny  [pipe-to-shell] piping curl output into bash runs unreviewed code. Download to a file, read it, then run it.
 ```
+
+<details>
+<summary><b>More examples: token guards, limits, routing, spend</b></summary>
 
 **Wasteful output is replaced by a cheaper route**
 
@@ -124,6 +106,8 @@ Recommendations (largest estimated saving first)
   4. Repeated full-file reads (~$1.06)
 ```
 
+</details>
+
 ## How it works
 
 ```mermaid
@@ -140,21 +124,24 @@ flowchart TD
     G -->|sent back with the reason| C
 ```
 
-Each diamond is a Claude Code hook running `harness`. Session start adds git state, the next feature and the last handoff note; compaction writes a checkpoint first. Decisions come back as structured JSON with a rule id and a reason, so Claude adjusts instead of retrying. Everything is recorded in a redacted, rotated audit log.
+- Each diamond is a Claude Code hook running `harness`.
+- Decisions come back as JSON with a rule id and a reason, so Claude adjusts instead of retrying.
+- Session start adds git state, the next feature and the last handoff note; compaction writes a checkpoint first.
+- Everything goes to a redacted, rotated audit log.
 
 ## What you get
 
 | | |
 | --- | --- |
 | **Guardrails** | A real shell parser (chains, pipes, `$(...)`, `bash -c`, heredocs, `sudo`/`env` wrappers) and 27 rules: destructive file and disk operations, remote code execution, history rewrites, hook bypass, secret files, protected paths, exfiltration domains, uploads, publishing, infrastructure and database destruction, destructive MCP tools |
-| **Token guards** | Refuses unchanged re-reads, generated files (lockfiles, bundles, maps, `node_modules`), oversized reads and context-flooding commands, each with a bounded alternative |
-| **Limits** | Minimum and maximum reply length (words, characters, tokens) and prompt length; effort, model, turns, budget, subagents, web searches, output and read sizes, compaction, thinking. One command resets any of them |
+| **Token guards** | Refuses unchanged re-reads, generated files (lockfiles, bundles, maps, `node_modules`), oversized reads and flooding commands, each with a bounded alternative |
+| **Limits** | Reply and prompt length (words, characters, tokens); effort, model, turns, budget, subagents, web searches, output and read sizes, compaction, thinking. One command resets any of them |
 | **Budgets** | Live spend per session from Claude Code's own transcript; a warning near the limit, confirmation once it is reached |
 | **Cost analytics** | Spend by model, session, main vs subagents and tool, cache hit rate, repeated reads, and ranked fixes |
 | **Subagent control** | Model routing per agent type, caps per session and on concurrency |
 | **Verification** | Success claims need a passing test or build since the last edit; an optional gate runs your tests before Claude may stop |
 | **Memory** | Feature list and handoff log in the repo, injected at session start and checkpointed before compaction |
-| **Workflows** | 21 skills and 7 subagents (below) |
+| **Workflows** | 21 skills and 7 subagents |
 | **Supply-chain checks** | `harness vet` reviews third-party skills and plugins before you install them |
 | **Stays current** | Unknown future hook events are logged instead of failing; `harness upstream` registers new ones |
 
@@ -167,6 +154,9 @@ Each diamond is a Claude Code hook running `harness`. Session start adds git sta
 | `harness init [--profile minimal\|standard\|strict]` | Wire hooks, policy, skills and subagents into a project. Merges, never overwrites, safe to repeat |
 | `harness doctor` | Validate every policy layer, run a behavioural self-test and the real hook |
 | `harness optimize [--profile balanced\|lean] [--budget USD] [--apply]` | Apply Claude Code's token limits, deny generated-file reads, route subagents. Preview unless `--apply` |
+
+<details>
+<summary><b>Cost, limits, safety and workflow commands</b></summary>
 
 **Cost and limits**
 
@@ -198,9 +188,14 @@ Each diamond is a Claude Code hook running `harness`. Session start adds git sta
 | `harness upstream [--apply]` | Register hook events Claude Code added since this release |
 | `harness statusline` | Branch, model, context %, cost, blocked and saved calls, budget, features |
 
+</details>
+
 ## Cutting token cost
 
-In Claude Code most of the bill is context: every request re-reads the whole conversation. A 40 KB log read at turn 10 is paid for again on every later turn. Cost falls when less enters the context and fewer premium tokens are spent.
+Most of a Claude Code bill is context: every request re-reads the whole conversation, so a 40 KB log read at turn 10 is paid for again on every later turn.
+
+<details>
+<summary><b>What each mechanism saves</b></summary>
 
 | Mechanism | What it saves |
 | --- | --- |
@@ -212,7 +207,9 @@ In Claude Code most of the bill is context: every request re-reads the whole con
 | Session budget | Surprises |
 | `harness optimize` for Claude Code's own limits | Bash output, file reads, web searches, nesting, compaction threshold |
 
-Savings depend on how a team works. Measure: `harness cost --since 7d`, then `harness optimize --apply`, then compare a week later. Prices are editable under `cost.prices`.
+</details>
+
+Savings depend on how a team works. To measure: run `harness cost --since 7d`, then `harness optimize --apply`, and compare a week later. Prices are editable under `cost.prices`.
 
 ## Limits
 
@@ -223,6 +220,9 @@ $ harness limits set effort medium budget 5
 $ harness limits reset output        # or input, subagents, one limit, all
 ```
 
+<details>
+<summary><b>How each limit holds</b></summary>
+
 | Limit | How it holds |
 | --- | --- |
 | `output.max-tokens` | Claude Code's own hard cap per response |
@@ -230,6 +230,8 @@ $ harness limits reset output        # or input, subagents, one limit, all
 | Prompt words and characters | Stopped before sending, with the reason and the reset command |
 | Effort, model, turns, subagents, web searches, output and read sizes, compaction, thinking | Claude Code settings, applied from the next session |
 | Budget | Checked before every tool call |
+
+</details>
 
 Plain words work too: the `managing-limits` skill turns "keep answers under 100 words" or "reset the limits" into the right command.
 
@@ -251,9 +253,10 @@ Plain words work too: the `managing-limits` skill turns "keep answers under 100 
 }
 ```
 
-Spawns over a limit are denied with a reason; routing sets the model only when the caller did not choose one.
+Spawns over a limit are denied with a reason. Routing sets the model only when the caller did not choose one.
 
-## Skills and subagents
+<details>
+<summary><b>All 21 skills and 7 subagents</b></summary>
 
 | Skill | Use when |
 | --- | --- |
@@ -278,9 +281,19 @@ Spawns over a limit are denied with a reason; routing sets the model only when t
 | `planner` | Request to feature list | inherit |
 | `evaluator` | Independent verification | inherit |
 
+</details>
+
 ## Configuration
 
-Layered JSON: built-in defaults, then `~/.claude/harness/policy.json`, `.claude/harness/policy.json` (committed), `.claude/harness/policy.local.json` (personal) and `$HARNESS_POLICY`. Lists append, objects merge, `"key!"` replaces a list.
+Layered JSON, each layer over the last:
+
+1. Built-in defaults
+2. `~/.claude/harness/policy.json`
+3. `.claude/harness/policy.json` (committed)
+4. `.claude/harness/policy.local.json` (personal)
+5. `$HARNESS_POLICY`
+
+Lists append, objects merge, `"key!"` replaces a list.
 
 ```json
 {
@@ -293,7 +306,9 @@ Layered JSON: built-in defaults, then `~/.claude/harness/policy.json`, `.claude/
 }
 ```
 
-`"mode": "warn"` shows every would-be decision without blocking. Every rule and key: [docs/policy.md](docs/policy.md). Hook details: [docs/hooks.md](docs/hooks.md). Design: [docs/architecture.md](docs/architecture.md).
+`"mode": "warn"` shows every would-be decision without blocking.
+
+Reference: [every rule and key](docs/policy.md) · [hooks](docs/hooks.md) · [design](docs/architecture.md)
 
 ## Other agents
 
@@ -345,10 +360,8 @@ No. It checks every tool call, but code Claude writes and later runs is outside 
 
 ## Companion tools
 
-| Tool | What it adds |
-| --- | --- |
-| [claude-ledger](https://github.com/LiamSDD/claude-ledger) | Standalone spend report across your whole Claude Code history: by model, project, day, session and subagent, with Markdown, JSON and CSV output. `harness cost` covers the current project; claude-ledger covers everything, and works without the harness installed. |
-| [pixelpath](https://github.com/LiamSDD/pixelpath) | Zero-dependency SVG to PNG rasterizer, handy for generating icons and README images inside agent workflows without native libraries. |
+- [claude-ledger](https://github.com/LiamSDD/claude-ledger): spend report across your whole Claude Code history, by model, project, day, session and subagent, as Markdown, JSON or CSV. `harness cost` covers the current project; claude-ledger covers everything and works without the harness.
+- [pixelpath](https://github.com/LiamSDD/pixelpath): zero-dependency SVG to PNG rasterizer for icons and README images inside agent workflows, with no native libraries.
 
 ## Development
 
@@ -357,9 +370,9 @@ make test     # 238 tests, standard library unittest
 make check    # lint, tests, policy validation, secret scan, skill lint, self-vet
 ```
 
-The repository is built with its own harness ([.claude/settings.json](.claude/settings.json)). Contributor notes: [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Community project; not affiliated with or endorsed by Anthropic.
+- The repository is built with its own harness ([.claude/settings.json](.claude/settings.json)).
+- Contributor notes: [CONTRIBUTING.md](CONTRIBUTING.md).
+- Community project; not affiliated with or endorsed by Anthropic.
 
 ## License
 
